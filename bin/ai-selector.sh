@@ -123,8 +123,20 @@ cleanup() {
 # v1.5.0 menyu ERR-trap bug'i), shuning uchun xatodan keyin yangilash buyrug'ini
 # KATTA, ko'zga tashlanadigan panel bilan eslatamiz — user darrov chiqib oladi.
 crash() {
-  local cmd="${1:-?}" line="${2:-?}" upd
+  local cmd="${1:-?}" line="${2:-?}" upd i
+  # ENG AVVAL alt-screen'dan chiqamiz. Menyu ochiq bo'lganda (\033[?1049h) xato
+  # matni ALTERNATE ekranga chiziladi, so'ng ekran tiklanganda u O'CHIB ketadi —
+  # "hech qanday xato ko'rsatmasdan yopildi" shikoyatining sababi aynan shu.
+  # Ketma-ketlik idempotent: alt-screen ochilmagan bo'lsa ham zararsiz.
+  printf '\033[?1007l\033[?25h\033[?7h\033[?1049l' >/dev/tty 2>/dev/null || true
   log_error "$(t "Kutilmagan xato: %s (qator: %s)" "$cmd" "$line")"
+  # AIDEVIX_DEBUG=1 — chaqiruvlar stegi (bug-report uchun). Std: ko'rsatilmaydi.
+  if [[ -n "${AIDEVIX_DEBUG:-}" ]]; then
+    printf '  --- aidevix stack trace ---\n' >&2
+    for (( i=1; i<${#FUNCNAME[@]}; i++ )); do
+      printf '    %s() @ %s:%s\n' "${FUNCNAME[i]}" "${BASH_SOURCE[i]:-?}" "${BASH_LINENO[i-1]:-?}" >&2
+    done
+  fi
   # Yangilash buyrug'i o'rnatish turiga qarab: git checkout bo'lsa --update, aks
   # holda npm (crash beradigan userlarning aksariyati — npm/Windows).
   upd="npm i -g ${NPM_PKG}@latest"
@@ -1058,6 +1070,10 @@ select_with_arrows() {
   # Interaktiv TTY shart (chaqiruvchi tekshirgan; bu — himoya uchun ikkilamchi).
   { : >/dev/tty; } 2>/dev/null || return 2  # faqat poyga holatida; trap'ni tripmaslik uchun shartli kontekstda emas — gate run_menu'da
 
+  # Klavisha o'qish `dd`ga tayanadi (qarang _rd). Yo'q bo'lsa JIM o'lmaymiz:
+  # rc=2 bilan qaytamiz → run_menu raqamli menyuga tushadi va sababini aytadi.
+  command -v dd >/dev/null 2>&1 || return 2
+
   # Datafile (TSV, 9 maydon)ni BIR o'qishda massivlarga olamiz — klavish tsiklida
   # tashqi jarayon (awk) UMUMAN ochilmaydi. Windows/MSYS'da har fork ~50-150ms:
   # avvalgi per-keypress awk/subshell'lar bitta strelka bosishini soniyagacha
@@ -1201,7 +1217,7 @@ select_with_arrows() {
   # (qatorlab emas, bayt-bayt), -icrnl (Enter \r bo'lib qolsin), min 1 time 0
   # (bloklovchi bayt o'qish). Bu — tsikldan tashqaridagi YAGONA tcsetattr:
   # MSYS konsolida setattr kutayotgan kiritishni o'chirib yuborgani uchun tsikl
-  # ichida termios'ga boshqa TEGILMAYDI (qarang _rb). Har qanday chiqishda
+  # ichida termios'ga boshqa TEGILMAYDI (qarang _rd). Har qanday chiqishda
   # (EXIT — bekor `exit 0` ham) eski holat tiklanadi.
   local _savedstty=""
   _savedstty="$(stty -g </dev/tty 2>/dev/null || true)"
@@ -1233,72 +1249,113 @@ select_with_arrows() {
   printf '\033[?1049h\033[H\033[?1007h\033[?25l\033[?7l' >/dev/tty
   _af
 
-  local key action selected="" cancelled=0 _t c1 c2 _n
+  local key action selected="" cancelled=0
+  local buf bi blen ch nx fin params more _g
   while :; do
     _ar
-    # Barcha baytlar bloklovchi _rb (dd) bilan — tsiklda BITTA ham tcsetattr
-    # yo'q (MSYS konsolida setattr kutayotgan baytlarni o'chirib yuborardi).
-    key=""; _rb key
-    action="char"
-    if [[ "$key" == $'\033' ]]; then
-      # ESC keldi: yo strelka/funksional klavishaning boshi (`\033[A` ...), yo
-      # yolg'iz ESC. Keyingi baytni BLOKLAB o'qiymiz — sequence baytlari klavisha
-      # bilan birga kelgani uchun darhol qaytadi; yolg'iz ESC esa keyingi
-      # klavishagacha kutadi (ikkinchi ESC = bekor). Timeout ATAYLAB yo'q:
-      # Windows konsolida timeout o'rnatishning o'zi baytlarni yo'qotardi.
-      c1=""; _rb c1
-      [[ "$c1" == $'\033' ]] && c1=""        # ESC-ESC → bekor
-      if [[ -z "$c1" ]]; then
-        action=cancel                       # ESC-ESC yoki EOF
-      elif [[ "$c1" == '[' || "$c1" == 'O' ]]; then
-        c2=""; _rb c2
-        case "$c2" in
-          A) action=up ;;
-          B) action=down ;;
-          C) action=right ;;
-          D) action=left ;;
-          H) action=home ;;
-          F) action=end ;;
-          5) _rb _t; action=pgup ;;
-          6) _rb _t; action=pgdn ;;
-          *)
-            # Boshqa CSI ketma-ketliklar (Delete \033[3~, F-klavishlar,
-            # Ctrl+strelka \033[1;5A, sichqoncha hodisalari...) — menyuni
-            # YOPMAYMIZ: yakuniy baytgacha (@..~ oralig'i) o'qib tashlab,
-            # e'tiborsiz qoldiramiz. CSI DOIM yakuniy bayt bilan tugaydi,
-            # shuning uchun bloklovchi o'qish bu yerda ham xavfsiz.
-            action=skip
-            _n=0
-            while [[ -n "$c2" && ! "$c2" =~ [@A-Za-z~] ]] && (( _n < 16 )); do
-              c2=""; _rb c2; _n=$(( _n + 1 ))
-            done ;;
-        esac
-      else
-        action=skip                          # Alt+harf kabi — e'tiborsiz qoldiramiz
-      fi
-    elif [[ -z "$key" ]]; then action=cancel       # EOF (terminal yopildi)
-    elif [[ "$key" == $'\r' || "$key" == $'\n' ]]; then action=enter
-    elif [[ "$key" == $'\177' || "$key" == $'\b' ]]; then action=bs
-    elif [[ "$key" == $'\t' ]]; then action=down
+    # Barcha baytlar BITTA bloklovchi _rd (dd) bilan — tsiklda BITTA ham
+    # tcsetattr yo'q (MSYS konsolida setattr kutayotgan baytlarni o'chirardi).
+    buf=""; _rd buf
+    if [[ -z "$buf" ]]; then
+      cancelled=1; break                     # EOF — terminal/quvur yopildi
     fi
 
-    case "$action" in
-      up)    (( cur > 0 )) && cur=$(( cur - 1 )) ;;
-      down)  (( ${#vis[@]} > 0 && cur < ${#vis[@]} - 1 )) && cur=$(( cur + 1 )) ;;
-      pgup)  cur=$(( cur - page )); (( cur < 0 )) && cur=0 ;;
-      pgdn)  cur=$(( cur + page )); (( ${#vis[@]} > 0 && cur > ${#vis[@]} - 1 )) && cur=$(( ${#vis[@]} - 1 )); (( cur < 0 )) && cur=0 ;;
-      home)  cur=0 ;;
-      end)   cur=$(( ${#vis[@]} - 1 )); (( cur < 0 )) && cur=0 ;;
-      enter) (( ${#vis[@]} > 0 )) && { selected="${names[${vis[cur]}]}"; break; } ;;
-      bs)    [[ -n "$query" ]] && { query="${query%?}"; _af; } ;;
-      skip)  : ;;                                    # notanish klavisha — e'tiborsiz
-      cancel) cancelled=1; break ;;
-      char)
-        case "$key" in
-          q|Q) [[ -z "$query" ]] && { cancelled=1; break; }; query+="$key"; _af ;;
-          *)   query+="$key"; _af ;;
-        esac ;;
-    esac
+    # Bo'lakni BAYTMA-BAYT tahlil qilamiz. Bitta bo'lakda bir nechta klavisha
+    # bo'lishi MUMKIN: g'ildirak tez aylanganda alternate-scroll ketma-ket
+    # \033[A/\033[B yuboradi, tez yozganda/paste qilganda esa bir necha harf
+    # birga keladi. Hammasini qayta ishlaymiz — aks holda bosilgan klavishalar
+    # "yo'qoladi". Tahlil SOF BASH: bo'lak ichida qo'shimcha o'qish YO'Q.
+    bi=0; blen=${#buf}
+    while (( bi < blen )); do
+      ch="${buf:bi:1}"; bi=$(( bi + 1 ))
+      key="$ch"; action="char"
+
+      if [[ "$ch" == $'\033' ]]; then
+        if (( bi >= blen )); then
+          # Bo'lak ESC bilan TUGADI. Ikki ehtimol: (a) chinakam yolg'iz ESC,
+          # (b) strelka ketma-ketligi ikki read()ga BO'LINIB qolgan (sekin
+          # SSH/pty da uchraydi; Windows konsolida esa birga keladi).
+          # TIMEOUT ishlatib bo'lmaydi — tcsetattr MSYS'da kutayotgan baytlarni
+          # o'chiradi (v1.5.0–v1.7.2 dagi "har strelka = bekor" bug'i shundan).
+          # Shuning uchun BLOKLAB yana bir bo'lak o'qiymiz: strelkaning davomi
+          # darhol keladi, chinakam yolg'iz ESC esa keyingi klavishagacha kutadi
+          # — bu ekrandagi yo'riqnomaga mos: "q yoki 2×ESC = bekor".
+          more=""; _rd more
+          if [[ -z "$more" ]]; then
+            action=cancel                     # EOF — davomi kelmadi
+          else
+            buf+="$more"; blen=${#buf}
+            bi=$(( bi - 1 ))                  # ESC ni davomi bilan QAYTA tahlil qilamiz
+            continue
+          fi
+        else
+          nx="${buf:bi:1}"
+          if [[ "$nx" == '[' || "$nx" == 'O' ]]; then
+            bi=$(( bi + 1 ))
+            # CSI/SS3: parametr baytlari (raqam, ';', '?') → yakuniy bayt (@..~).
+            # Ketma-ketlik bo'lakka SIG'MAY qolsa (sekin pty da bo'linadi),
+            # davomini BLOKLAB o'qiymiz — aks holda yakuniy bayt ('B' kabi)
+            # keyingi bo'lakda ODDIY HARF bo'lib qidiruvga tushib ketardi.
+            # `_g < 32` — buzuq ketma-ketlikda abadiy kutib qolmaslik uchun.
+            params=""; fin=""; _g=0
+            while (( _g < 32 )); do
+              if (( bi >= blen )); then
+                more=""; _rd more
+                [[ -z "$more" ]] && break        # EOF — davomi kelmadi
+                buf+="$more"; blen=${#buf}
+              fi
+              ch="${buf:bi:1}"; bi=$(( bi + 1 )); _g=$(( _g + 1 ))
+              if [[ "$ch" == [@A-Za-z~] ]]; then fin="$ch"; break; fi
+              params+="$ch"
+            done
+            case "$fin" in
+              A) action=up ;;
+              B) action=down ;;
+              H) action=home ;;
+              F) action=end ;;
+              '~') case "$params" in
+                     5)   action=pgup ;;
+                     6)   action=pgdn ;;
+                     1|7) action=home ;;
+                     4|8) action=end ;;
+                     *)   action=skip ;;
+                   esac ;;
+              # Qolgani (C/D o'ng-chap, F-klavishlar, Ctrl+strelka \033[1;5A,
+              # Delete \033[3~, sichqoncha hodisalari) — menyuni YOPMAYMIZ,
+              # shunchaki e'tiborsiz qoldiramiz.
+              *) action=skip ;;
+            esac
+          elif [[ "$nx" == $'\033' ]]; then
+            action=cancel                     # ESC-ESC = bekor
+          else
+            bi=$(( bi + 1 )); action=skip     # Alt+harf kabi — e'tiborsiz
+          fi
+        fi
+      elif [[ "$ch" == $'\r' || "$ch" == $'\n' ]]; then action=enter
+      elif [[ "$ch" == $'\177' || "$ch" == $'\b' ]]; then action=bs
+      elif [[ "$ch" == $'\t' ]]; then action=down
+      fi
+
+      # `break 2` — ichki (bo'lak) tsiklidan ham, tashqi (klavisha) tsiklidan
+      # ham chiqadi. `case` tsikl darajasi sifatida sanalmaydi.
+      case "$action" in
+        up)    (( cur > 0 )) && cur=$(( cur - 1 )) ;;
+        down)  (( ${#vis[@]} > 0 && cur < ${#vis[@]} - 1 )) && cur=$(( cur + 1 )) ;;
+        pgup)  cur=$(( cur - page )); (( cur < 0 )) && cur=0 ;;
+        pgdn)  cur=$(( cur + page )); (( ${#vis[@]} > 0 && cur > ${#vis[@]} - 1 )) && cur=$(( ${#vis[@]} - 1 )); (( cur < 0 )) && cur=0 ;;
+        home)  cur=0 ;;
+        end)   cur=$(( ${#vis[@]} - 1 )); (( cur < 0 )) && cur=0 ;;
+        enter) (( ${#vis[@]} > 0 )) && { selected="${names[${vis[cur]}]}"; break 2; } ;;
+        bs)    [[ -n "$query" ]] && { query="${query%?}"; _af; } ;;
+        skip)  : ;;                                  # notanish klavisha — e'tiborsiz
+        cancel) cancelled=1; break 2 ;;
+        char)
+          case "$key" in
+            q|Q) [[ -z "$query" ]] && { cancelled=1; break 2; }; query+="$key"; _af ;;
+            *)   query+="$key"; _af ;;
+          esac ;;
+      esac
+    done
   done
 
   # ALT-SCREEN'dan chiqamiz — asosiy ekran (banner va h.k.) o'z holicha qaytadi,
@@ -1373,7 +1430,11 @@ run_menu() {
       log_warn "$(t "fzf ishga tushmadi — ichki menyu ishlatilmoqda.")"
       rc=0
       if { : >/dev/tty; } 2>/dev/null; then
-        name="$(select_with_arrows "$menu" "$datafile")"
+        name="$(select_with_arrows "$menu" "$datafile")" || rc=$?
+        if (( rc == 2 )); then
+          log_warn "$(t "Interaktiv menyu ochilmadi — raqamli menyuga o'tildi.")"
+          rc=0; name="$(select_with_numbers "$menu")"
+        fi
       else
         name="$(select_with_numbers "$menu")"
       fi
@@ -1382,7 +1443,11 @@ run_menu() {
     fi
   elif { : >/dev/tty; } 2>/dev/null; then
     # fzf yo'q, lekin TTY bor — ichki ↑/↓ menyu (to'liq ma'lumotli).
-    name="$(select_with_arrows "$menu" "$datafile")"
+    name="$(select_with_arrows "$menu" "$datafile")" || rc=$?
+    if (( rc == 2 )); then
+      log_warn "$(t "Interaktiv menyu ochilmadi — raqamli menyuga o'tildi.")"
+      rc=0; name="$(select_with_numbers "$menu")"
+    fi
   else
     # TTY ham yo'q (quvur/CI) — oddiy raqamli menyu (stdin'dan o'qiydi).
     name="$(select_with_numbers "$menu")"
@@ -1946,7 +2011,16 @@ npm_autoupdate_apply() {
   log_info "$(t 'Yangilanmoqda: npm i -g %s@latest …' "$NPM_PKG")"
   if npm i -g "$NPM_PKG@latest" </dev/null; then
     log_ok "$(t 'Yangilandi (%s). Qayta ishga tushmoqda…' "$latest")"
-    exec "$0" "$@"                              # yangilangan versiya bilan qayta start
+    # `exec bash "$SELF"` — `exec "$0"` EMAS. Ikki sabab:
+    #   1) npm orqali chaqirilganda $0 Windows uslubidagi yo'l bo'lishi mumkin
+    #      (`C:\...\ai-selector.sh`, bin/cli.js shunday uzatadi) — uni to'g'ridan
+    #      exec qilish shebang'ga tayanadi va MSYS'da ishonchsiz;
+    #   2) skript endigina npm tomonidan QAYTA YOZILDI; bash skript faylini
+    #      dangasa (lazy) o'qiydi, shuning uchun yangi jarayonni aniq interpretator
+    #      bilan boshlagan ma'qul. auto_update ham xuddi shunday qiladi.
+    trap - ERR
+    cleanup 2>/dev/null || true
+    exec bash "$SELF" "$@"                      # yangilangan versiya bilan qayta start
   fi
   log_warn "$(t "Avtomatik yangilab bo'lmadi. Qo'lda: npm i -g %s@latest" "$NPM_PKG")"
   return 1

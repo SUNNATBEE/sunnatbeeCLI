@@ -15,28 +15,49 @@ const path = require('path');
 
 const SCRIPT = path.join(__dirname, 'ai-selector.sh');
 
-// bash'ni topish: avval PATH, so'ng Windows'dagi odatiy Git joylari.
+// WSL bashmi? Windows'da `where bash` KO'PINCHA C:\Windows\System32\bash.exe
+// ni birinchi qaytaradi — bu WSL launcher'i, Git Bash EMAS. Uni ishga tushirsak
+// Linux fayl tizimiga tushib qolamiz va `C:\...\ai-selector.sh` yo'li topilmaydi
+// → CLI jim yopiladi. Shuning uchun System32 dagi bash'ni ATAYLAB rad etamiz.
+function isWslBash(p) {
+  const sysRoot = process.env['SystemRoot'] || 'C:\\Windows';
+  const norm = path.resolve(p).toLowerCase();
+  return (
+    norm.startsWith(path.join(sysRoot, 'System32').toLowerCase()) ||
+    norm.startsWith(path.join(sysRoot, 'Sysnative').toLowerCase())
+  );
+}
+
+// bash'ni topish. Windows'da AVVAL Git for Windows joylari (WSL bilan
+// adashmaslik uchun), so'ng PATH. Unix'da avval PATH.
 function findBash() {
-  // PATH'da bash bormi? (which/where o'rniga spawnSync bilan tekshiramiz)
-  const probe = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['bash'], {
-    encoding: 'utf8',
-  });
-  if (probe.status === 0 && probe.stdout) {
-    const first = probe.stdout.split(/\r?\n/).find((l) => l.trim());
-    if (first && fs.existsSync(first.trim())) return first.trim();
+  const win = process.platform === 'win32';
+
+  const gitCandidates = win
+    ? [
+        path.join(process.env['ProgramFiles'] || 'C:\\Program Files', 'Git', 'bin', 'bash.exe'),
+        path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Git', 'bin', 'bash.exe'),
+        path.join(process.env['LOCALAPPDATA'] || '', 'Programs', 'Git', 'bin', 'bash.exe'),
+      ]
+    : [];
+
+  // Windows: Git Bash birinchi navbatda.
+  for (const c of gitCandidates) {
+    if (c && fs.existsSync(c)) return c;
   }
 
-  if (process.platform === 'win32') {
-    const candidates = [
-      path.join(process.env['ProgramFiles'] || 'C:\\Program Files', 'Git', 'bin', 'bash.exe'),
-      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Git', 'bin', 'bash.exe'),
-      path.join(process.env['LOCALAPPDATA'] || '', 'Programs', 'Git', 'bin', 'bash.exe'),
-    ];
-    for (const c of candidates) {
-      if (c && fs.existsSync(c)) return c;
+  // PATH'da bash bormi? (which/where o'rniga spawnSync bilan tekshiramiz)
+  const probe = spawnSync(win ? 'where' : 'which', ['bash'], { encoding: 'utf8' });
+  if (probe.status === 0 && probe.stdout) {
+    for (const line of probe.stdout.split(/\r?\n/)) {
+      const p = line.trim();
+      if (!p || !fs.existsSync(p)) continue;
+      if (win && isWslBash(p)) continue;      // WSL launcher — o'tkazib yuboramiz
+      return p;
     }
-    return null;
   }
+
+  if (win) return null;
 
   // Unix: oxirgi chora.
   for (const c of ['/bin/bash', '/usr/bin/bash', '/usr/local/bin/bash']) {
@@ -55,15 +76,46 @@ function main() {
     process.exit(127);
   }
 
-  const args = [SCRIPT, ...process.argv.slice(2)];
+  // Yo'lni oldinga-slash shaklida beramiz: `C:\...\ai-selector.sh` dagi teskari
+  // slashlar bash uchun ekranlash belgisi bo'lib ko'rinishi mumkin. MSYS
+  // `C:/...` ni muammosiz tushunadi.
+  const script = SCRIPT.replace(/\\/g, '/');
+  const args = [script, ...process.argv.slice(2)];
+
+  if (process.env.AIDEVIX_DEBUG) {
+    process.stderr.write('[debug] bash   = ' + bash + '\n');
+    process.stderr.write('[debug] script = ' + script + '\n');
+    process.stderr.write('[debug] tty    = stdin:' + Boolean(process.stdin.isTTY) +
+      ' stdout:' + Boolean(process.stdout.isTTY) + '\n');
+  }
+
   const res = spawnSync(bash, args, { stdio: 'inherit' });
 
   if (res.error) {
-    process.stderr.write('[x] Ishga tushirib bo\'lmadi: ' + res.error.message + '\n');
+    process.stderr.write('[x] Ishga tushirib bo\'lmadi: ' + res.error.message + '\n' +
+      '    bash: ' + bash + '\n' +
+      '    skript: ' + script + '\n');
     process.exit(1);
   }
-  // Signal bilan to'xtagan bo'lsa ham mantiqiy exit-kod qaytaramiz.
-  process.exit(res.status === null ? 1 : res.status);
+  // Signal bilan to'xtaganda JIM chiqmaymiz — sababini aytamiz (aks holda
+  // "hech narsa ko'rsatmasdan yopildi" bo'lib qoladi).
+  if (res.status === null) {
+    process.stderr.write('[x] Aidevix kutilmaganda to\'xtadi' +
+      (res.signal ? ' (signal: ' + res.signal + ')' : '') + '.\n' +
+      '    Batafsil: AIDEVIX_DEBUG=1 aidevix\n');
+    process.exit(1);
+  }
+  process.exit(res.status);
 }
+
+// Jim o'lim yo'q: kutilmagan istisno/rad etishni ko'rsatamiz.
+process.on('uncaughtException', (err) => {
+  process.stderr.write('[x] Kutilmagan xato (aidevix launcher): ' + (err && err.stack || err) + '\n');
+  process.exit(1);
+});
+process.on('unhandledRejection', (err) => {
+  process.stderr.write('[x] Kutilmagan rad etish (aidevix launcher): ' + (err && err.stack || err) + '\n');
+  process.exit(1);
+});
 
 main();

@@ -279,6 +279,7 @@ MSG_EN["🔑 provayder API kaliti (OpenAI/lokal)"]="🔑 provider API key (OpenA
 
 # --- menyu (fzf fallback / oxirgi agent belgisi) ---------------------------
 MSG_EN["fzf ishga tushmadi — ichki menyu ishlatilmoqda."]="fzf failed to start — using the built-in menu."
+MSG_EN["Interaktiv menyu ochilmadi — raqamli menyuga o'tildi."]="Could not open the interactive menu — falling back to the numbered menu."
 MSG_EN["oxirgi"]="last"
 MSG_EN["q yoki 2×ESC = bekor · Enter = tanlash"]="q or ESC twice = cancel · Enter = select"
 

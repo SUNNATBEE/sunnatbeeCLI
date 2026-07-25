@@ -118,7 +118,15 @@ _arrows_body() {
 @test "select_with_arrows: chiqishda TTY holatini tiklaydi (stty restore + EXIT trap)" {
   local body; body="$(_arrows_body)"
   printf '%s\n' "$body" | grep -qE 'stty -g'                 # eski holatni saqlaydi
-  printf '%s\n' "$body" | grep -qE "trap '.*stty .*' EXIT"   # EXIT'da tiklaydi
+  # Tiklash `_menu_restore` yordamchisiga ajratilgan (EXIT va INT/TERM ikkalasi
+  # ham shuni chaqiradi), shuning uchun trap satri ichida `stty` bo'lishi SHART
+  # emas — muhimi: EXIT tutqichi bor VA u termios'ni haqiqatan tiklaydi.
+  printf '%s\n' "$body" | grep -qE "trap '_menu_restore' EXIT"
+  local restore
+  restore="$(printf '%s\n' "$body" | awk '/^  _menu_restore\(\) \{/{f=1} f{print} f&&/^  \}$/{exit}')"
+  [ -n "$restore" ]
+  printf '%s\n' "$restore" | grep -qE 'stty "\$_savedstty"'
+  printf '%s\n' "$restore" | grep -q '1049l'
 }
 
 @test "select_with_arrows: strelka baytlari harakatga bog'lanadi" {

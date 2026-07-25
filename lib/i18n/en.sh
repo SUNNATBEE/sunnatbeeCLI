@@ -285,3 +285,12 @@ MSG_EN["q yoki 2×ESC = bekor · Enter = tanlash"]="q or ESC twice = cancel · E
 
 # --- dispatch -------------------------------------------------------------
 MSG_EN["Noma'lum tanlov: %s"]="Unknown option: %s"
+
+# --- Ctrl+C (uzilish) -----------------------------------------------------
+MSG_EN["To'xtatildi (Ctrl+C) — %s bekor qilindi."]="Stopped (Ctrl+C) — %s cancelled."
+MSG_EN["Fayllar buzilmadi — keyingi ishga tushirishda qaytadan urinadi."]="No files were corrupted — it will retry on the next run."
+MSG_EN["yangilanish"]="the update"
+MSG_EN["menyu"]="the menu"
+MSG_EN["agent o'rnatish"]="the agent installation"
+MSG_EN["agentni ishga tushirish"]="the agent launch"
+MSG_EN["joriy amal"]="the current operation"

@@ -107,10 +107,49 @@ fi
 # shellcheck source=../lib/common.sh
 source "$LIB"
 
-# Vaqtinchalik fayllarni tozalash + kursorni tiklash.
+# --- Uzilish (Ctrl+C) holati ----------------------------------------------
+# AIDEVIX_PHASE — hozir NIMA bajarilyapti. Ctrl+C bosilganda "Bekor qilindi"
+# o'rniga ANIQ nima to'xtaganini aytamiz (yangilanishmi, menyumi, o'rnatishmi).
+AIDEVIX_PHASE=""
+INTERRUPTED=0
+# TTY_SAVED_STATE — menyu RAW rejimga o'tishdan OLDIN saqlangan termios.
+# Menyu `$(...)` qism-qobig'ida ishlaydi va uning EXIT-trap'i SIGINT'da
+# ISHLAMAYDI (bash qism-qobiqni default INT bilan o'ldiradi), shuning uchun
+# holatni OTA-jarayonda saqlaymiz — aks holda Ctrl+C dan keyin terminal
+# raw rejimda (echo'siz) qolib ketadi.
+TTY_SAVED_STATE=""
+
+# save_tty_state — joriy termios'ni bir marta yodda saqlaydi.
+save_tty_state() {
+  [[ -z "$TTY_SAVED_STATE" ]] || return 0
+  TTY_SAVED_STATE="$(stty -g 2>/dev/null </dev/tty || true)"
+}
+# atomic_write <fayl> <matn> — AVVAL vaqtinchalik faylga yozib, so'ng rename
+# qiladi. `printf > fayl` fayldan avval truncate qiladi: Ctrl+C aynen shu
+# oraliqda kelsa fayl BO'SH qolib ketardi. rename atomik — fayl doim yo eski,
+# yo yangi holatda bo'ladi, hech qachon yarim.
+atomic_write() {
+  local f="$1" data="$2" tmp
+  mkdir -p "$(dirname "$f")" 2>/dev/null || return 1
+  tmp="$(mktemp "${f}.XXXXXX" 2>/dev/null)" || return 1
+  if printf '%s\n' "$data" >"$tmp" 2>/dev/null && mv -f "$tmp" "$f" 2>/dev/null; then
+    return 0
+  fi
+  rm -f "$tmp" 2>/dev/null
+  return 1
+}
+
+# restore_tty_state — saqlangan termios'ni tiklaydi (bo'lmasa — no-op).
+restore_tty_state() {
+  [[ -n "$TTY_SAVED_STATE" ]] || return 0
+  stty "$TTY_SAVED_STATE" 2>/dev/null </dev/tty || true
+}
+
+# Vaqtinchalik fayllarni tozalash + terminalni tiklash.
 TMPFILES=()
 cleanup() {
   ui_spin_stop 2>/dev/null || true
+  restore_tty_state          # raw rejim qolib ketmasin (Ctrl+C dan keyin ham)
   show_cursor
   # Ichki menyu avto-o'rash/alt-screen'ni o'zgartirgan bo'lishi mumkin — har
   # ehtimolga tiklaymiz (alt-screen'da bo'lmasak \033[?1049l zararsiz no-op).
@@ -118,6 +157,38 @@ cleanup() {
   local f
   for f in ${TMPFILES[@]+"${TMPFILES[@]}"}; do rm -f "$f" 2>/dev/null || true; done
 }
+
+# on_interrupt — Ctrl+C (INT) / TERM ishlov beruvchisi.
+# Uchta muammoni hal qiladi:
+#   1) terminalni DARHOL tiklaydi (raw rejim + alt-screen) — xabar ko'rinsin;
+#   2) NIMA bekor qilinganini aniq aytadi (AIDEVIX_PHASE);
+#   3) 130 bilan chiqadi (Ctrl+C uchun to'g'ri kod; ilgari 0 qaytardi).
+# QAYTA KIRISHDAN himoyalangan: tozalash paytida yana Ctrl+C bosilsa, tutqich
+# o'chirilgani uchun ikkinchi bosish darhol default tarzda o'ldiradi.
+on_interrupt() {
+  (( INTERRUPTED )) && return 0
+  INTERRUPTED=1
+  trap - INT TERM
+  restore_tty_state
+  printf '\033[?1007l\033[?25h\033[?7h\033[?1049l' >&2 2>/dev/null || true
+  ui_spin_stop 2>/dev/null || true
+  local what
+  case "$AIDEVIX_PHASE" in
+    update)  what="$(t 'yangilanish')" ;;
+    menu)    what="$(t 'menyu')" ;;
+    install) what="$(t "agent o'rnatish")" ;;
+    launch)  what="$(t 'agentni ishga tushirish')" ;;
+    *)       what="$(t 'joriy amal')" ;;
+  esac
+  printf '\n' >&2
+  log_warn "$(t "To'xtatildi (Ctrl+C) — %s bekor qilindi." "$what")"
+  # Yangilanish yarim qolgan bo'lsa — holat buzilmaganini aytamiz (git/npm
+  # o'z yozuvlarini o'zi atomik qiladi; biz faqat stamp yozamiz).
+  [[ "$AIDEVIX_PHASE" == "update" ]] && \
+    log_info "$(t "Fayllar buzilmadi — keyingi ishga tushirishda qaytadan urinadi.")"
+  exit 130
+}
+trap on_interrupt INT TERM
 # crash <buyruq> <qator> — KUTILMAGAN xato (ERR-tutqich) ishlov beruvchisi.
 # Oddiy `die`dan farqi: crashlarning aksariyati ESKI versiyada bo'ladi (masalan
 # v1.5.0 menyu ERR-trap bug'i), shuning uchun xatodan keyin yangilash buyrug'ini
@@ -128,7 +199,7 @@ crash() {
   # matni ALTERNATE ekranga chiziladi, so'ng ekran tiklanganda u O'CHIB ketadi —
   # "hech qanday xato ko'rsatmasdan yopildi" shikoyatining sababi aynan shu.
   # Ketma-ketlik idempotent: alt-screen ochilmagan bo'lsa ham zararsiz.
-  printf '\033[?1007l\033[?25h\033[?7h\033[?1049l' >/dev/tty 2>/dev/null || true
+  printf '\033[?1007l\033[?25h\033[?7h\033[?1049l' 2>/dev/null >/dev/tty || true
   log_error "$(t "Kutilmagan xato: %s (qator: %s)" "$cmd" "$line")"
   # AIDEVIX_DEBUG=1 — chaqiruvlar stegi (bug-report uchun). Std: ko'rsatilmaydi.
   if [[ -n "${AIDEVIX_DEBUG:-}" ]]; then
@@ -378,7 +449,7 @@ global_stats_enabled() {
 # set_global_stats <on|off> — opt-in holatini saqlaydi.
 set_global_stats() {
   mkdir -p "$STATE_DIR" 2>/dev/null || return 1
-  printf '%s\n' "$1" >"$GLOBAL_OPTIN_FILE" 2>/dev/null || return 1
+  atomic_write "$GLOBAL_OPTIN_FILE" "$1" || return 1
 }
 
 # stats_cmd [on|off] — `aidevix --stats` buyrug'i: holatni ko'rsatadi yoki o'zgartiradi.
@@ -534,7 +605,7 @@ choose_language() {
     *)                              chosen="${AIDEVIX_LANG_RESOLVED:-uz}" ;;  # Enter → aniqlangan
   esac
   mkdir -p "$STATE_DIR" 2>/dev/null || true
-  printf '%s\n' "$chosen" >"$LANG_FILE" 2>/dev/null || true
+  atomic_write "$LANG_FILE" "$chosen" || true
   aidevix_set_lang "$chosen" 2>/dev/null || true
 }
 
@@ -544,7 +615,7 @@ lang_cmd() {
   case "$arg" in
     en|uz)
       mkdir -p "$STATE_DIR" 2>/dev/null || true
-      printf '%s\n' "$arg" >"$LANG_FILE" 2>/dev/null || true
+      atomic_write "$LANG_FILE" "$arg" || true
       aidevix_set_lang "$arg" 2>/dev/null || true
       log_success "$(t 'Til o'\''rnatildi: %s' "$arg")"
       ;;
@@ -1220,9 +1291,22 @@ select_with_arrows() {
   # ichida termios'ga boshqa TEGILMAYDI (qarang _rd). Har qanday chiqishda
   # (EXIT — bekor `exit 0` ham) eski holat tiklanadi.
   local _savedstty=""
-  _savedstty="$(stty -g </dev/tty 2>/dev/null || true)"
-  trap 'stty "$_savedstty" </dev/tty 2>/dev/null || true; printf "\033[?1007l\033[?25h\033[?7h\033[?1049l" >/dev/tty 2>/dev/null || true' EXIT
-  stty -echo -icanon -icrnl min 1 time 0 </dev/tty 2>/dev/null || true
+  _savedstty="$(stty -g 2>/dev/null </dev/tty || true)"
+  # _menu_restore — termios + ekran rejimlarini tiklaydi. Ikki tutqichda ham
+  # ishlatiladi (idempotent).
+  _menu_restore() {
+    stty "$_savedstty" 2>/dev/null </dev/tty || true
+    printf "\033[?1007l\033[?25h\033[?7h\033[?1049l" 2>/dev/null >/dev/tty || true
+  }
+  trap '_menu_restore' EXIT
+  # INT/TERM ALOHIDA kerak: bu funksiya `$(...)` qism-qobig'ida ishlaydi va
+  # bash qism-qobiqda trap'larni DEFAULT'ga tiklaydi — ya'ni ota-jarayonning
+  # INT tutqichi bu yerda ISHLAMAYDI, EXIT tutqichi esa SIGINT bilan
+  # o'ldirilganda UMUMAN chaqirilmaydi. Natijada Ctrl+C dan keyin terminal
+  # raw rejimda (echo'siz) qolib ketardi. 130 — Ctrl+C uchun to'g'ri kod;
+  # run_menu uni ushlab, ota-jarayonni ham to'g'ri to'xtatadi.
+  trap '_menu_restore; exit 130' INT TERM
+  stty -echo -icanon -icrnl min 1 time 0 2>/dev/null </dev/tty || true
 
   # _rd <o'zgaruvchi> — TTY'dan BITTA bloklovchi read() bilan BO'LAKNI (chunk)
   # o'qiydi (dd bs=64 count=1; termios'ga tegmaydi).
@@ -1360,7 +1444,7 @@ select_with_arrows() {
 
   # ALT-SCREEN'dan chiqamiz — asosiy ekran (banner va h.k.) o'z holicha qaytadi,
   # menyu izsiz yo'qoladi. TTY rejimi va kursor/o'rash tiklanadi.
-  stty "$_savedstty" </dev/tty 2>/dev/null || true
+  stty "$_savedstty" 2>/dev/null </dev/tty || true
   printf '\033[?1007l\033[?25h\033[?7h\033[?1049l' >/dev/tty
 
   if (( cancelled )); then
@@ -1373,6 +1457,10 @@ select_with_arrows() {
 # --- Interaktiv menyu -----------------------------------------------------
 run_menu() {
   local filter="${1:-}"
+  AIDEVIX_PHASE="menu"
+  # Termios'ni menyu RAW rejimga o'tishdan OLDIN saqlab qo'yamiz — Ctrl+C
+  # qism-qobiqni o'ldirsa ham ota-jarayondagi cleanup uni tiklay oladi.
+  save_tty_state
 
   # Ilk ishga tushishda tilni so'raymiz (keyin saqlangan tildan foydalanamiz).
   choose_language
@@ -1447,6 +1535,8 @@ run_menu() {
     if (( rc == 2 )); then
       log_warn "$(t "Interaktiv menyu ochilmadi — raqamli menyuga o'tildi.")"
       rc=0; name="$(select_with_numbers "$menu")"
+    elif (( rc == 130 )); then
+      exit 130                                 # Ctrl+C — menyu o'zi tozalagan
     fi
   else
     # TTY ham yo'q (quvur/CI) — oddiy raqamli menyu (stdin'dan o'qiydi).
@@ -1561,6 +1651,7 @@ quick_launch() {
 
 # --- CLI mavjudligini ta'minlash (kerak bo'lsa avtomatik o'rnatish) -------
 ensure_installed() {
+  AIDEVIX_PHASE="install"
   local name="$1" binary="$2" install="$3"
 
   command -v "$binary" >/dev/null 2>&1 && return 0
@@ -1725,6 +1816,7 @@ ensure_installed() {
 
 # --- Agentni ishga tushirish ----------------------------------------------
 launch_agent() {
+  AIDEVIX_PHASE="launch"
   local name="$1" binary="$2" command="$3"
   ui_launch "$name"
   trap - ERR
@@ -1878,6 +1970,7 @@ add_agent() {
 # versiyani qayta ishga tushiradi. Throttled (standart 3 soat).
 # O'chirish: AIDEVIX_NO_AUTOUPDATE=1 · Oraliq: AIDEVIX_UPDATE_INTERVAL (sekund).
 auto_update() {
+  AIDEVIX_PHASE="update"
   [[ -n "${AIDEVIX_NO_AUTOUPDATE:-}" || -n "${CI:-}" ]] && return 0
   [[ -d "$PROJECT_ROOT/.git" ]] || return 0
   command -v git >/dev/null 2>&1 || return 0
@@ -1890,7 +1983,7 @@ auto_update() {
     (( now - last < interval )) && return 0
   fi
   mkdir -p "$STATE_DIR" 2>/dev/null || true
-  printf '%s\n' "$now" >"$stamp" 2>/dev/null || true
+  atomic_write "$stamp" "$now" || true
 
   # http.schannelCheckRevoke=false — Windows git'dagi sertifikat-otzыv (revocation)
   # xatosini oldini oladi (CRYPT_E_NO_REVOCATION_CHECK).
@@ -1991,6 +2084,7 @@ fetch_npm_latest() {
 # eski/crash beradigan versiyadagi userni avtomatik chiqarib olamiz. Rad etsa yoki
 # o'rnatish muvaffaqiyatsiz bo'lsa — passiv eslatmaga qaytish uchun 1 qaytaradi.
 npm_autoupdate_apply() {
+  AIDEVIX_PHASE="update"
   local latest="$1"; shift
   local ans="" q
   q="$(t '🔄 Yangi versiya bor (%s → %s). Hozir avtomatik yangilaymizmi? [Y/n] ' "$AIDEVIX_VERSION" "$latest")"

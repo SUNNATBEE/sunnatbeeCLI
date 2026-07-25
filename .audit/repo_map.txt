@@ -1,0 +1,159 @@
+./bin/ai-selector.sh:1010:  _ar() {
+./bin/ai-selector.sh:1069:  _rb() {
+./bin/ai-selector.sh:107:cleanup() {
+./bin/ai-selector.sh:1150:run_menu() {
+./bin/ai-selector.sh:119:crash() {
+./bin/ai-selector.sh:1220:touch_agent_update_stamp() {
+./bin/ai-selector.sh:1236:maybe_autoupdate_agent() {
+./bin/ai-selector.sh:1269:launch_selected() {
+./bin/ai-selector.sh:1293:quick_launch() {
+./bin/ai-selector.sh:1313:ensure_installed() {
+./bin/ai-selector.sh:142:usage() {
+./bin/ai-selector.sh:1454:launch_agent() {
+./bin/ai-selector.sh:1464:update_agents() {
+./bin/ai-selector.sh:1496:doctor() {
+./bin/ai-selector.sh:1550:prompt_tty() {
+./bin/ai-selector.sh:1565:add_agent() {
+./bin/ai-selector.sh:1606:auto_update() {
+./bin/ai-selector.sh:1662:is_npm_install() {
+./bin/ai-selector.sh:1672:version_gt() {
+./bin/ai-selector.sh:1693:fetch_npm_latest() {
+./bin/ai-selector.sh:1719:npm_autoupdate_apply() {
+./bin/ai-selector.sh:1752:maybe_npm_update_hint() {
+./bin/ai-selector.sh:1776:main() {
+./bin/ai-selector.sh:231:resolve_config() {
+./bin/ai-selector.sh:242:build_merged_config() {
+./bin/ai-selector.sh:268:trim() { printf '%s' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
+./bin/ai-selector.sh:273:detect_install_tool() {
+./bin/ai-selector.sh:284:read_last() { [[ -r "$STATE_FILE" ]] && cat "$STATE_FILE" 2>/dev/null || true; }
+./bin/ai-selector.sh:285:save_last() {
+./bin/ai-selector.sh:294:record_usage() {
+./bin/ai-selector.sh:314:read_usage() {
+./bin/ai-selector.sh:328:global_stats_enabled() {
+./bin/ai-selector.sh:337:set_global_stats() {
+./bin/ai-selector.sh:343:stats_cmd() {
+./bin/ai-selector.sh:380:report_usage_global() {
+./bin/ai-selector.sh:397:fetch_global_stats() {
+./bin/ai-selector.sh:418:global_install_tsv() {
+./bin/ai-selector.sh:443:maybe_global_hint() {
+./bin/ai-selector.sh:460:load_saved_lang() {
+./bin/ai-selector.sh:469:choose_language() {
+./bin/ai-selector.sh:500:lang_cmd() {
+./bin/ai-selector.sh:523:maybe_show_intro() {
+./bin/ai-selector.sh:550:should_open_login_link() {
+./bin/ai-selector.sh:567:maybe_show_auth_note() {
+./bin/ai-selector.sh:604:augment_tool_path() {
+./bin/ai-selector.sh:664:parse_agents() {
+./bin/ai-selector.sh:702:build_rows() {
+./bin/ai-selector.sh:722:list_agents() {
+./bin/ai-selector.sh:748:preview_agent() {
+./bin/ai-selector.sh:793:build_menu() {
+./bin/ai-selector.sh:800:    function human(x) {
+./bin/ai-selector.sh:839:select_with_fzf() {
+./bin/ai-selector.sh:889:select_with_numbers() {
+./bin/ai-selector.sh:935:select_with_arrows() {
+./bin/ai-selector.sh:979:  _af() {
+./bin/ai-selector.sh:992:  _ad() {
+./bin/cli.js:19:function findBash() {
+./bin/cli.js:48:function main() {
+./bin/postinstall.js:15:  const g = (s) => `\x1b[32m${s}\x1b[0m`;   // yashil
+./bin/postinstall.js:16:  const b = (s) => `\x1b[1m${s}\x1b[0m`;    // qalin
+./bin/postinstall.js:17:  const d = (s) => `\x1b[90m${s}\x1b[0m`;   // kulrang
+./bootstrap.sh:24:info()  { printf '\033[0;34m[i]\033[0m %s\n' "$*" >&2; }
+./bootstrap.sh:25:ok()    { printf '\033[0;32m[✓]\033[0m %s\n' "$*" >&2; }
+./bootstrap.sh:26:err()   { printf '\033[0;31m[x]\033[0m %s\n' "$*" >&2; }
+./bootstrap.sh:27:die()   { local c="$1"; shift; err "$*"; exit "$c"; }
+./completions/aidevix.bash:9:_ai_complete() {
+./install.sh:104:download_to() {
+./install.sh:121:install_fzf_binary() {
+./install.sh:164:_ensure_fzf() {
+./install.sh:204:ensure_fzf() {
+./install.sh:213:check_prerequisites() {
+./install.sh:223:detect_shell_rc() {
+./install.sh:233:backup_file() {
+./install.sh:247:install_command() {
+./install.sh:28:  log_info()    { printf '[i] %s\n' "$*" >&2; }
+./install.sh:29:  log_warn()    { printf '[!] %s\n' "$*" >&2; }
+./install.sh:30:  log_error()   { printf '[x] %s\n' "$*" >&2; }
+./install.sh:31:  log_success() { printf '[✓] %s\n' "$*" >&2; }
+./install.sh:313:install_user_config() {
+./install.sh:32:  die() { local c="$1"; shift; log_error "$*"; exit "$c"; }
+./install.sh:328:install_shell_block() {
+./install.sh:35:on_install_error() {
+./install.sh:365:main() {
+./install.sh:73:detect_os_arch() {
+./install.sh:91:fzf_latest_tag() {
+./lib/common.sh:101:require_cmd() {
+./lib/common.sh:118:panel() {
+./lib/common.sh:130:tool_hint() {
+./lib/common.sh:159:show_cursor() { [[ "${UI_TTY:-0}" -eq 1 ]] && printf '\033[?25h' >&2 || true; }
+./lib/common.sh:163:open_url() {
+./lib/common.sh:188:hr() {
+./lib/common.sh:198:banner() {
+./lib/common.sh:25:  t() { local f="$1"; shift; if (( $# )); then printf "$f" "$@"; else printf '%s' "$f"; fi; }
+./lib/common.sh:256:spin_run() {
+./lib/common.sh:324:loader_3d() {
+./lib/common.sh:376:ui_launch() {
+./lib/common.sh:386:ui_spin_start() {
+./lib/common.sh:408:ui_spin_stop() {
+./lib/common.sh:86:log_info()    { printf '%s[i]%s %s\n'  "$C_BLUE"   "$C_RESET" "$*" >&2; }
+./lib/common.sh:87:log_warn()    { printf '%s[!]%s %s\n'  "$C_YELLOW" "$C_RESET" "$*" >&2; }
+./lib/common.sh:88:log_error()   { printf '%s[x]%s %s\n'  "$C_RED"    "$C_RESET" "$*" >&2; }
+./lib/common.sh:89:log_success() { printf '%s[✓]%s %s\n'  "$C_GREEN"  "$C_RESET" "$*" >&2; }
+./lib/common.sh:93:die() {
+./lib/i18n.sh:22:aidevix_detect_lang() {
+./lib/i18n.sh:48:aidevix_set_lang() {
+./lib/i18n.sh:66:t() {
+./scripts/demo.sh:36:pause() { sleep "${1:-0.7}"; }
+./scripts/demo.sh:39:type_cmd() {
+./scripts/demo.sh:51:run() {
+./scripts/record-demo.sh:26:note() { printf '\033[36m[i]\033[0m %s\n' "$*" >&2; }
+./scripts/record-demo.sh:27:err()  { printf '\033[31m[x]\033[0m %s\n' "$*" >&2; }
+./server/src/app.js:11:export function buildApp({ redis, rateLimit: enableRateLimit = true, logger = false } = {}) {
+./server/src/config.js:4:const toInt = (v, def) => {
+./server/src/redis.js:7:export function createRedis() {
+./server/src/server.js:31:async function shutdown(signal) {
+./server/src/stats.js:11:export async function recordEvent(redis, agent, type) {
+./server/src/stats.js:16:async function rankedList(redis, type) {
+./server/src/stats.js:26:export async function getStats(redis, types) {
+./server/src/stats.js:8:const keyFor = (type) => `${KEY_PREFIX}:${type}`;
+./server/test/app.test.js:10:function makeApp() {
+./tests/agent_autoupdate.bats:10:setup() {
+./tests/agent_autoupdate.bats:16:  spin_run() { printf 'RAN:%s\n' "$2" >>"$RAN_LOG"; return 0; }
+./tests/agent_autoupdate.bats:17:  augment_tool_path() { :; }
+./tests/agent_autoupdate.bats:21:stamp_for() { printf '%s/%s' "$AGENT_UPDATE_DIR" "$(printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_')"; }
+./tests/cli.bats:107:  ensure_installed() { :; }
+./tests/cli.bats:108:  maybe_show_auth_note() { :; }
+./tests/cli.bats:109:  save_last() { :; }
+./tests/cli.bats:110:  launch_agent() { printf 'LAUNCH|%s\n' "$1"; }
+./tests/cli.bats:119:  ensure_installed() { :; }
+./tests/cli.bats:120:  maybe_show_auth_note() { :; }
+./tests/cli.bats:121:  save_last() { :; }
+./tests/cli.bats:122:  launch_agent() { printf 'LAUNCH|%s\n' "$1"; }
+./tests/cli.bats:6:setup() {
+./tests/cli.bats:95:  ensure_installed() { :; }
+./tests/cli.bats:96:  maybe_show_auth_note() { :; }
+./tests/cli.bats:97:  save_last() { :; }
+./tests/cli.bats:98:  launch_agent() { printf 'LAUNCH|%s|%s|%s\n' "$1" "$2" "$3"; }
+./tests/common.bats:9:setup() {
+./tests/completion.bats:13:setup() {
+./tests/completion.bats:20:complete_for() {
+./tests/global_stats.bats:10:setup() {
+./tests/i18n.bats:8:setup() {
+./tests/menu_errtrap.bats:17:setup() {
+./tests/menu_errtrap.bats:22:_arrows_body() {
+./tests/npm_update.bats:10:setup() {
+./tests/test_helper.bash:17:setup_env() {
+./tests/test_helper.bash:35:load_selector() {
+./tests/test_helper.bash:45:load_common() {
+./tests/test_helper.bash:54:run_cli() {
+./tests/top_rank.bats:10:setup() {
+./tests/unit_parse.bats:6:setup() {
+./tests/usage.bats:10:setup() {
+./uninstall.sh:20:  log_info()    { printf '[i] %s\n' "$*" >&2; }
+./uninstall.sh:21:  log_warn()    { printf '[!] %s\n' "$*" >&2; }
+./uninstall.sh:22:  log_error()   { printf '[x] %s\n' "$*" >&2; }
+./uninstall.sh:23:  log_success() { printf '[✓] %s\n' "$*" >&2; }
+./uninstall.sh:24:  die() { local c="$1"; shift; log_error "$*"; exit "$c"; }
+./uninstall.sh:36:remove_block_from() {
+./uninstall.sh:53:main() {

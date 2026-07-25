@@ -1099,17 +1099,6 @@ select_with_arrows() {
   # Alt-screen'da har chizish \033[H dan boshlanadi — balandlikni sanash shart emas,
   # lekin det[] DOIM 6 qator bo'lishi kerak (aks holda eski qatorlar qoladi).
 
-  # ESC ketma-ketligini ajratish uchun timeout — TTY drayveri (termios VTIME) bilan,
-  # DECI-SONIYADA (0.1s birligi). NEGA bash `read -t` EMAS: u select()/poll() ga
-  # tayanadi; Windows (MINGW/MSYS) konsol deskriptorida select ISHONCHSIZ — timeout
-  # darhol "bo'sh" qaytib, har strelka "cancel" deb o'qilib menyu yopilib qolardi.
-  # stty min/time + dd esa kernel read() ni ishlatadi → VTIME haqiqatan kutadi.
-  # Windows konsolida baytlar bo'lak-bo'lak kelgani uchun oraliqni oshiramiz.
-  local escds=1
-  case "$(uname -s 2>/dev/null || echo unknown)" in
-    MINGW*|MSYS*|CYGWIN*) escds=4 ;;
-  esac
-
   # Statik matn/yorliqlarni BIR MARTA hisoblaymiz — har $(t ...) command
   # substitution ham fork; ularni klavish tsiklida takrorlash Windows'da
   # menyuni sezilarli sekinlashtirardi.
@@ -1118,7 +1107,7 @@ select_with_arrows() {
   S_HDR="  ${C_BOLD}${C_TITLE}✦ Aidevix CLI${C_RESET}  ${C_GRAY}$(t '↑/↓ tanlang · yozib qidiring · ENTER ishga tushirish · ESC bekor')${C_RESET}"
   S_PROMPT="$(t '  qidirish › ')"
   S_HR="  ${C_GRAY}$(hr 30)${C_RESET}"
-  S_FOOT="  ${C_GRAY}$(t 'q/ESC = bekor · Enter = tanlash')${C_RESET}"
+  S_FOOT="  ${C_GRAY}$(t 'q yoki 2×ESC = bekor · Enter = tanlash')${C_RESET}"
   S_NOMATCH="  ${C_GRAY}$(t 'Moslik topilmadi — Backspace bilan qidiruvni tahrirlang.')${C_RESET}"
   S_INST="${C_GREEN}● $(t "o'rnatilgan")${C_RESET}"
   S_NOINST="${C_RED}○ $(t "o'rnatilmagan")${C_RESET}"
@@ -1208,54 +1197,33 @@ select_with_arrows() {
   set +e
   trap - ERR
 
-  # TTY'ni RAW-rejimga o'tkazamiz va eski holatni saqlaymiz: -echo (yozilgan ko'rinmasin),
-  # -icanon (qatorlab emas, bayt-bayt), -icrnl (Enter \r bo'lib qolsin, \n ga aylanmasin).
-  # Har qanday chiqishda (EXIT — bekor `exit 0` ham) tiklaymiz. Endi baytlarni bash
-  # `read -n -t` o'rniga kernel termios (VMIN/VTIME) orqali o'qiymiz — Windows konsolida
-  # `read -t` ishonchsiz, bu esa har joyda (Linux/mac/MSYS) bir xil ishonchli ishlaydi.
+  # TTY'ni RAW-rejimga BIR MARTA o'tkazamiz: -echo (yozilgan ko'rinmasin), -icanon
+  # (qatorlab emas, bayt-bayt), -icrnl (Enter \r bo'lib qolsin), min 1 time 0
+  # (bloklovchi bayt o'qish). Bu — tsikldan tashqaridagi YAGONA tcsetattr:
+  # MSYS konsolida setattr kutayotgan kiritishni o'chirib yuborgani uchun tsikl
+  # ichida termios'ga boshqa TEGILMAYDI (qarang _rb). Har qanday chiqishda
+  # (EXIT — bekor `exit 0` ham) eski holat tiklanadi.
   local _savedstty=""
   _savedstty="$(stty -g </dev/tty 2>/dev/null || true)"
   trap 'stty "$_savedstty" </dev/tty 2>/dev/null || true; printf "\033[?1007l\033[?25h\033[?7h\033[?1049l" >/dev/tty 2>/dev/null || true' EXIT
   stty -echo -icanon -icrnl min 1 time 0 </dev/tty 2>/dev/null || true
 
-  # _rb <o'zgaruvchi> [deci-soniya] — TTY'dan BITTA bayt o'qiydi. Deci-soniya berilsa
-  # min0/time bilan o'sha vaqtgacha kutadi (bayt kelmasa → bo'sh); berilmasa bloklab
-  # kutadi. `dd` kernel read() ni chaqiradi → VMIN/VTIME hurmat qilinadi.
+  # _rd <o'zgaruvchi> — TTY'dan BITTA bloklovchi read() bilan BO'LAKNI (chunk)
+  # o'qiydi (dd bs=64 count=1; termios'ga tegmaydi).
   #
-  # UCH QATLAMLI himoya (Windows konsol tty'lari har xil buzuq bo'ladi):
-  #   1) stty VTIME + dd — kernel timeout (asosiy yo'l);
-  #   2) u DARHOL bo'sh qaytsa (VTIME yolg'on) → bash `read -t 1` (select) zaxirasi;
-  #   3) u ham darhol bo'sh qaytsa → TIMERS_BROKEN=1: bu muhitda hech qanday
-  #      timeout ishlamaydi — ESC-ketma-ketliklar bloklab o'qiladi (_rq).
-  # "Darhol"ligini EPOCHREALTIME (bash 5+, Git Bash'da bor) bilan o'lchaymiz;
-  # bo'lmasa (mac bash 3.2 — u yerda VTIME ishlaydi) hech narsa o'zgarmaydi.
-  _rb() {
-    if [[ -n "${2:-}" ]]; then
-      local _v="" _t0=""
-      [[ -n "${EPOCHREALTIME:-}" ]] && _t0="${EPOCHREALTIME/./}"
-      stty min 0 time "$2" </dev/tty 2>/dev/null || true
-      _v="$(dd bs=1 count=1 2>/dev/null </dev/tty)"
-      stty min 1 time 0 </dev/tty 2>/dev/null || true   # bloklash rejimiga qaytamiz
-      if [[ -z "$_v" && -n "$_t0" ]] && (( ${EPOCHREALTIME/./} - _t0 < $2 * 50000 )); then
-        # So'ralgan kutishning yarmiga ham yetmasdan bo'sh qaytdi → VTIME yolg'on.
-        IFS= read -rsn1 -t 1 _v </dev/tty 2>/dev/null || _v=""
-        if [[ -z "$_v" ]] && (( ${EPOCHREALTIME/./} - _t0 < 500000 )); then
-          TIMERS_BROKEN=1                    # select ham kutmadi — timeout'lar o'lik
-        fi
-      fi
-      printf -v "$1" '%s' "$_v"
-    else
-      printf -v "$1" '%s' "$(dd bs=1 count=1 2>/dev/null </dev/tty)"
-    fi
-  }
-
-  # _rq <o'zgaruvchi> — ESC-ketma-ketlik baytini o'qiydi: timeout ishlaydigan
-  # muhitda VTIME bilan; TIMERS_BROKEN bo'lsa BLOKLAB — strelka/funksional
-  # klavisha baytlari klavisha bilan BIRGA kelgani uchun bloklovchi o'qish ularni
-  # darhol oladi (shu tufayli strelka hech qachon "bekor" deb o'qilmaydi).
-  _rq() {
-    if [[ "${TIMERS_BROKEN:-0}" -eq 1 ]]; then _rb "$1"; else _rb "$1" "$escds"; fi
-  }
+  # NEGA aynan BO'LAK? Haqiqiy Windows konsolida (conhost/Windows Terminal'dagi
+  # Git Bash) o'tkazilgan tajribalar IKKITA qat'iy faktni ko'rsatdi:
+  #   1) HAR QANDAY tcsetattr — `stty min/time` ham, bash `read -t/-n` ning
+  #      ichki setattr'i ham — kutayotgan kiritish baytlarini O'CHIRIB yuboradi
+  #      → timeout'li o'qish MUMKIN EMAS (v1.5.0–v1.7.2 dagi "har strelka =
+  #      bekor" bug'ining ildizi shu edi);
+  #   2) o'qilmagan "dum" baytlar o'qigan JARAYON bilan birga o'ladi (msys
+  #      readahead per-process) → baytma-bayt alohida dd'lar ham MUMKIN EMAS.
+  # Bitta read() esa klavish bilan birga kelgan BARCHA baytlarni birga qaytaradi
+  # (probe: DOWN → $'\E[B', PgUp → $'\E[5~' — butunligicha): strelka hech qachon
+  # bo'linmaydi ham, yo'qolmaydi ham. ESC'dan keyin bo'lakda bayt bo'lmasa —
+  # bu chinakam YOLG'IZ ESC (bekor) — timersiz ham bir zumda aniqlanadi.
+  _rd() { printf -v "$1" '%s' "$(dd bs=64 count=1 2>/dev/null </dev/tty)"; }
 
   # ALT-SCREEN'ga o'tamiz (\033[?1049h): menyu alohida ekranda chiziladi —
   # sichqoncha g'ildiragi terminal scrollback'ini siljitib ramkani buzmaydi.
@@ -1265,33 +1233,25 @@ select_with_arrows() {
   printf '\033[?1049h\033[H\033[?1007h\033[?25l\033[?7l' >/dev/tty
   _af
 
-  local key action selected="" cancelled=0 _t c1 c2 _n TIMERS_BROKEN=0
+  local key action selected="" cancelled=0 _t c1 c2 _n
   while :; do
     _ar
-    # Birinchi baytni bash'ning BLOKLOVCHI read'i bilan o'qiymiz — builtin,
-    # forksiz (Windows'da har fork qimmat). Ishonchsizlik faqat `-t` (timeout)
-    # rejimida edi; timeout'li o'qishlar uchun _rb (stty VTIME + dd) qoladi.
-    key=""; IFS= read -rsn1 key </dev/tty || key=""
+    # Barcha baytlar bloklovchi _rb (dd) bilan — tsiklda BITTA ham tcsetattr
+    # yo'q (MSYS konsolida setattr kutayotgan baytlarni o'chirib yuborardi).
+    key=""; _rb key
     action="char"
     if [[ "$key" == $'\033' ]]; then
-      # ESC keldi: bu YOLG'IZ ESC (bekor) yoki strelka/funksional klavishaning
-      # boshlanishi (`\033[A` ...) bo'lishi mumkin. Qolgan baytlarni VTIME timeout
-      # bilan o'qiymiz: bayt bo'lsa darhol keladi, bo'lmasa escds deci-soniyada
-      # timeout → bo'sh → haqiqiy yolg'iz ESC. (bash `read -t` Windows konsolida
-      # tezda bo'sh qaytib har strelkani "bekor" deb o'qirdi — endi termios kutadi.)
-      c1=""; _rq c1
-      if [[ -z "$c1" && "${TIMERS_BROKEN:-0}" -eq 1 ]]; then
-        # HOZIRGINA aniqlandi: bu muhitda timeout'lar umuman ishlamaydi (ba'zi
-        # Windows konsol tty'lari). Baytni BLOKLAB qayta o'qiymiz — strelka
-        # bosilgan bo'lsa uning `[A` baytlari allaqachon bufferda, darhol keladi.
-        # Yolg'iz ESC bo'lsa keyingi klavishagacha kutiladi: ikkinchi ESC — bekor.
-        _rb c1
-        [[ "$c1" == $'\033' ]] && c1=""      # ESC-ESC → yolg'iz ESC (bekor) yo'liga
-      fi
+      # ESC keldi: yo strelka/funksional klavishaning boshi (`\033[A` ...), yo
+      # yolg'iz ESC. Keyingi baytni BLOKLAB o'qiymiz — sequence baytlari klavisha
+      # bilan birga kelgani uchun darhol qaytadi; yolg'iz ESC esa keyingi
+      # klavishagacha kutadi (ikkinchi ESC = bekor). Timeout ATAYLAB yo'q:
+      # Windows konsolida timeout o'rnatishning o'zi baytlarni yo'qotardi.
+      c1=""; _rb c1
+      [[ "$c1" == $'\033' ]] && c1=""        # ESC-ESC → bekor
       if [[ -z "$c1" ]]; then
-        action=cancel                       # haqiqiy yolg'iz ESC
+        action=cancel                       # ESC-ESC yoki EOF
       elif [[ "$c1" == '[' || "$c1" == 'O' ]]; then
-        c2=""; _rq c2
+        c2=""; _rb c2
         case "$c2" in
           A) action=up ;;
           B) action=down ;;
@@ -1299,18 +1259,18 @@ select_with_arrows() {
           D) action=left ;;
           H) action=home ;;
           F) action=end ;;
-          5) _rq _t; action=pgup ;;
-          6) _rq _t; action=pgdn ;;
+          5) _rb _t; action=pgup ;;
+          6) _rb _t; action=pgdn ;;
           *)
             # Boshqa CSI ketma-ketliklar (Delete \033[3~, F-klavishlar,
             # Ctrl+strelka \033[1;5A, sichqoncha hodisalari...) — menyuni
             # YOPMAYMIZ: yakuniy baytgacha (@..~ oralig'i) o'qib tashlab,
-            # e'tiborsiz qoldiramiz. Avval bular "cancel" deb o'qilib,
-            # scroll paytida menyu to'satdan yopilib qolardi.
+            # e'tiborsiz qoldiramiz. CSI DOIM yakuniy bayt bilan tugaydi,
+            # shuning uchun bloklovchi o'qish bu yerda ham xavfsiz.
             action=skip
             _n=0
             while [[ -n "$c2" && ! "$c2" =~ [@A-Za-z~] ]] && (( _n < 16 )); do
-              c2=""; _rq c2; _n=$(( _n + 1 ))
+              c2=""; _rb c2; _n=$(( _n + 1 ))
             done ;;
         esac
       else

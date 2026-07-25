@@ -1,0 +1,6 @@
+ATTACHED
+WRITE ok=True n=2
+WRITE ok=True n=2
+WRITE ok=True n=2
+WRITE ok=True n=2
+DONE

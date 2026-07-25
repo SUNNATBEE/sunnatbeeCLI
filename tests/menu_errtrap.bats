@@ -73,53 +73,43 @@ _arrows_body() {
   [[ "$output" == *"aidevix --update"* ]]
 }
 
-# --- Strelka navigatsiyasi: baytlar termios (stty+dd) orqali o'qiladi -------
-# Bug (Windows): bash `read -t` select()/poll() ga tayanadi; MINGW/MSYS konsol
-# deskriptorida select ISHONCHSIZ — timeout darhol bo'sh qaytib, ESC'dan keyingi
-# `[A` baytlari "kelmadi" deb hisoblanardi → har strelka "cancel" deb o'qilib menyu
-# yopilib qolardi (baytma-bayt `read -rsn1 -t` ham shu sababdan yetarli bo'lmadi).
-# Fix: bash `read` o'rniga stty min/time (VTIME) + dd — kernel read() VTIME'ni
-# haqiqatan kutadi, har joyda (Linux/mac/MSYS) ishonchli ishlaydi.
-@test "select_with_arrows: asosiy o'qish bloklovchi, 'read -t' faqat _rb zaxirasi" {
-  local body; body="$(_arrows_body)"
-  # Tsikldagi BIRINCHI bayt bloklovchi builtin read bilan o'qiladi (-t'siz).
-  printf '%s\n' "$body" | grep -vE '^\s*#' | grep -q 'IFS= read -rsn1 key </dev/tty'
-  # `read -t` faqat _rb ichidagi VTIME-yolg'on zaxirasida — bittadan oshmasin
-  # (unga TAYANILMAYDI: VTIME asosiy, read -t esa 2-qatlam).
+# --- Strelka navigatsiyasi: baytlar FAQAT bloklovchi dd bilan o'qiladi ------
+# Ildiz sabab (haqiqiy conhost'da probe bilan isbotlangan): MSYS konsol
+# tty'sida HAR QANDAY tcsetattr — `stty min/time` ham, bash `read -t/-n`ning
+# ichki setattr'i ham — kutayotgan kiritish baytlarini O'CHIRIB yuboradi.
+# Strelkaning `[A` dumi ESC o'qilgach bufferda turadi, timeout o'rnatish uchun
+# qilingan setattr uni yo'q qiladi → har strelka "yolg'iz ESC = bekor" bo'lardi.
+# Fix: raw rejim BIR MARTA boshda; tsiklda faqat bloklovchi `dd` (sof read()).
+@test "select_with_arrows: klavish tsiklida timeout'li read yo'q (read -t taqiqlangan)" {
   local n
-  n="$(printf '%s\n' "$body" | grep -vE '^\s*#' | grep -cE 'read -rsn?[0-9]* -t' || true)"
-  [ "$n" -le 1 ]
+  n="$(_arrows_body | grep -vE '^\s*#' | grep -cE 'read -rsn?[0-9]* -t' || true)"
+  [ "$n" -eq 0 ]
 }
 
-@test "select_with_arrows: baytlarni stty min/time + dd (termios) bilan o'qiydi" {
+@test "select_with_arrows: baytlar bloklovchi dd bilan, tsiklda tcsetattr YO'Q" {
   local body; body="$(_arrows_body)"
-  # _rb yordamchisi: dd bilan bitta bayt o'qiydi.
+  # _rb yordamchisi: dd bilan bitta bayt (termios'ga tegmaydi).
   printf '%s\n' "$body" | grep -qE 'dd bs=1 count=1'
-  # Timeout TTY drayveri orqali (stty min 0 time ...).
-  printf '%s\n' "$body" | grep -qE 'stty min 0 time'
-  # Bloklash rejimi (stty min 1 time 0) ham o'rnatiladi.
-  printf '%s\n' "$body" | grep -qE 'stty .* min 1 time 0|stty min 1 time 0'
+  # `stty min 0 time` (per-o'qish VTIME) endi BO'LMASLIGI shart — MSYS konsolida
+  # u kutayotgan baytlarni o'chirib yuborardi.
+  ! printf '%s\n' "$body" | grep -vE '^\s*#' | grep -qE 'stty min 0 time'
+  # Raw rejim bir marta boshda o'rnatiladi (min 1 time 0) va EXIT'da tiklanadi.
+  printf '%s\n' "$body" | grep -qE 'stty -echo -icanon -icrnl min 1 time 0'
 }
 
-@test "select_with_arrows: ESC tarmog'ida kamida ikki marta seq-o'qish (c1,c2)" {
-  # ESC'dan keyin c1 va c2 baytlari _rq (VTIME yoki bloklovchi) bilan o'qiladi;
-  # _rq esa timeout ishlaydigan muhitda _rb'ni escds bilan chaqiradi.
+@test "select_with_arrows: birinchi bayt ham _rb (dd) bilan o'qiladi" {
+  # bash `read -n1` ham ichida tcsetattr qiladi — tez bosilgan klavishlarni
+  # o'chirib yubormasligi uchun birinchi bayt ham dd orqali.
+  _arrows_body | grep -vE '^\s*#' | grep -qE '^\s*key=""; _rb key$'
+}
+
+@test "select_with_arrows: ESC tarmog'ida c1/c2 bloklab o'qiladi, ESC-ESC = bekor" {
   local body n
   body="$(_arrows_body)"
-  n="$(printf '%s\n' "$body" | grep -vE '^\s*#' | grep -cE '_rq [a-z0-9_]+')"
+  n="$(printf '%s\n' "$body" | grep -vE '^\s*#' | grep -cE '_rb c[12]')"
   [ "$n" -ge 2 ]
-  printf '%s\n' "$body" | grep -qE '_rb "\$1" "\$escds"'
-}
-
-@test "select_with_arrows: timeout'lar o'lik muhitda bloklovchi rejimga o'tadi" {
-  # Ba'zi Windows konsol tty'larida VTIME ham, select ham kutmasdan bo'sh
-  # qaytadi — strelkalar "yolg'iz ESC = bekor" deb o'qilib menyu yopilardi.
-  # TIMERS_BROKEN aniqlanishi va bloklovchi qayta o'qish mavjudligini tekshiramiz.
-  local body; body="$(_arrows_body)"
-  printf '%s\n' "$body" | grep -q 'TIMERS_BROKEN=1'      # aniqlash (o'lchov)
-  printf '%s\n' "$body" | grep -q 'TIMERS_BROKEN=0'      # boshlang'ich holat
-  # Aniqlangach c1 bloklab qayta o'qiladi (ESC-ESC → bekor yo'li ham bor).
-  printf '%s\n' "$body" | grep -qE '^\s*_rb c1$'
+  # Yolg'iz ESC endi darhol bekor qilmaydi (timeout yo'q) — ikkinchi ESC bekor.
+  printf '%s\n' "$body" | grep -q "ESC-ESC"
 }
 
 @test "select_with_arrows: chiqishda TTY holatini tiklaydi (stty restore + EXIT trap)" {

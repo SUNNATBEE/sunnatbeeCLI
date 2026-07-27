@@ -125,3 +125,33 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == "LAUNCH|Bravo CLI" ]]
 }
+
+# --- npm launcher (bin/cli.js) --------------------------------------------
+# Windows'da `where bash` KO'PINCHA C:\Windows\System32\bash.exe (WSL) ni
+# birinchi qaytaradi. Uni ishga tushirsak Linux fayl tizimiga tushib qolamiz,
+# `C:\...\ai-selector.sh` topilmaydi va CLI JIM yopiladi — global npm
+# o'rnatishdagi "menyu ochilmay yopiladi" shikoyatining sabablaridan biri.
+@test "cli.js: WSL (System32) bash'ini rad etadi" {
+  command -v node >/dev/null 2>&1 || skip "node yo'q"
+  grep -q 'isWslBash' "$PROJECT_ROOT/bin/cli.js"
+  grep -q 'System32' "$PROJECT_ROOT/bin/cli.js"
+  # Git Bash joylari PATH probe'idan OLDIN tekshirilishi kerak.
+  local gitline probeline
+  gitline="$(grep -n 'gitCandidates' "$PROJECT_ROOT/bin/cli.js" | head -1 | cut -d: -f1)"
+  probeline="$(grep -n "spawnSync(win ? 'where'" "$PROJECT_ROOT/bin/cli.js" | head -1 | cut -d: -f1)"
+  [ -n "$gitline" ] && [ -n "$probeline" ] && [ "$gitline" -lt "$probeline" ]
+}
+
+@test "cli.js: jim o'lmaydi — uncaught/unhandled tutiladi" {
+  grep -q "uncaughtException" "$PROJECT_ROOT/bin/cli.js"
+  grep -q "unhandledRejection" "$PROJECT_ROOT/bin/cli.js"
+  # Signal bilan to'xtaganda ham sabab yoziladi.
+  grep -q "res.status === null" "$PROJECT_ROOT/bin/cli.js"
+}
+
+@test "cli.js: --version node orqali ishlaydi" {
+  command -v node >/dev/null 2>&1 || skip "node yo'q"
+  run node "$PROJECT_ROOT/bin/cli.js" --version
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Aidevix CLI"* ]]
+}

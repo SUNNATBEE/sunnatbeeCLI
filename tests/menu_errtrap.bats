@@ -88,8 +88,9 @@ _arrows_body() {
 
 @test "select_with_arrows: baytlar bloklovchi dd bilan, tsiklda tcsetattr YO'Q" {
   local body; body="$(_arrows_body)"
-  # _rb yordamchisi: dd bilan bitta bayt (termios'ga tegmaydi).
-  printf '%s\n' "$body" | grep -qE 'dd bs=1 count=1'
+  # _rd yordamchisi: dd bilan BITTA read() (termios'ga tegmaydi). Bo'lak
+  # o'lchami muhim emas — muhimi bitta bloklovchi read va tcsetattr yo'qligi.
+  printf '%s\n' "$body" | grep -qE 'dd bs=[0-9]+ count=1'
   # `stty min 0 time` (per-o'qish VTIME) endi BO'LMASLIGI shart — MSYS konsolida
   # u kutayotgan baytlarni o'chirib yuborardi.
   ! printf '%s\n' "$body" | grep -vE '^\s*#' | grep -qE 'stty min 0 time'
@@ -97,33 +98,47 @@ _arrows_body() {
   printf '%s\n' "$body" | grep -qE 'stty -echo -icanon -icrnl min 1 time 0'
 }
 
-@test "select_with_arrows: birinchi bayt ham _rb (dd) bilan o'qiladi" {
+@test "select_with_arrows: birinchi o'qish ham _rd (dd) bilan bo'ladi" {
   # bash `read -n1` ham ichida tcsetattr qiladi — tez bosilgan klavishlarni
-  # o'chirib yubormasligi uchun birinchi bayt ham dd orqali.
-  _arrows_body | grep -vE '^\s*#' | grep -qE '^\s*key=""; _rb key$'
+  # o'chirib yubormasligi uchun birinchi o'qish ham dd orqali (bo'lakma-bo'lak).
+  _arrows_body | grep -vE '^\s*#' | grep -qE '^\s*buf=""; _rd buf$'
 }
 
-@test "select_with_arrows: ESC tarmog'ida c1/c2 bloklab o'qiladi, ESC-ESC = bekor" {
+@test "select_with_arrows: ESC davomi BLOKLAB o'qiladi, ESC-ESC = bekor" {
   local body n
   body="$(_arrows_body)"
-  n="$(printf '%s\n' "$body" | grep -vE '^\s*#' | grep -cE '_rb c[12]')"
+  # Ketma-ketlik bo'lakka sig'masa (yolg'iz ESC yoki bo'lingan CSI) davomi
+  # bloklovchi qo'shimcha _rd bilan olinadi — timeout ISHLATILMAYDI.
+  n="$(printf '%s\n' "$body" | grep -vE '^\s*#' | grep -cE '_rd more')"
   [ "$n" -ge 2 ]
-  # Yolg'iz ESC endi darhol bekor qilmaydi (timeout yo'q) — ikkinchi ESC bekor.
+  # Yolg'iz ESC darhol bekor qilmaydi — ikkinchi ESC bekor qiladi.
   printf '%s\n' "$body" | grep -q "ESC-ESC"
 }
 
 @test "select_with_arrows: chiqishda TTY holatini tiklaydi (stty restore + EXIT trap)" {
   local body; body="$(_arrows_body)"
   printf '%s\n' "$body" | grep -qE 'stty -g'                 # eski holatni saqlaydi
-  printf '%s\n' "$body" | grep -qE "trap '.*stty .*' EXIT"   # EXIT'da tiklaydi
+  # Tiklash `_menu_restore` yordamchisiga ajratilgan (EXIT va INT/TERM ikkalasi
+  # ham shuni chaqiradi), shuning uchun trap satri ichida `stty` bo'lishi SHART
+  # emas — muhimi: EXIT tutqichi bor VA u termios'ni haqiqatan tiklaydi.
+  printf '%s\n' "$body" | grep -qE "trap '_menu_restore' EXIT"
+  local restore
+  restore="$(printf '%s\n' "$body" | awk '/^  _menu_restore\(\) \{/{f=1} f{print} f&&/^  \}$/{exit}')"
+  [ -n "$restore" ]
+  printf '%s\n' "$restore" | grep -qE 'stty "\$_savedstty"'
+  printf '%s\n' "$restore" | grep -q '1049l'
 }
 
-@test "select_with_arrows: strelka baytlari up/down/left/right ga bog'lanadi" {
+@test "select_with_arrows: strelka baytlari harakatga bog'lanadi" {
   local body; body="$(_arrows_body)"
   printf '%s\n' "$body" | grep -qE '^\s*A\) action=up'
   printf '%s\n' "$body" | grep -qE '^\s*B\) action=down'
-  printf '%s\n' "$body" | grep -qE '^\s*C\) action=right'
-  printf '%s\n' "$body" | grep -qE '^\s*D\) action=left'
+  printf '%s\n' "$body" | grep -qE '^\s*H\) action=home'
+  printf '%s\n' "$body" | grep -qE '^\s*F\) action=end'
+  # O'ng/chap (C/D) qidiruv satrini tahrirlamaydi — ular ilgari ham dispatch'da
+  # tarmoqsiz edi (ya'ni amalda `skip`). Endi umumiy `*) action=skip` ga tushadi:
+  # MUHIMI — menyuni YOPMAYDI. Buni 'notanish CSI' testi ham tekshiradi.
+  printf '%s\n' "$body" | grep -qE '^\s*\*\) action=skip'
 }
 
 # --- Scroll/g'ildirak va notanish klavishlar tuzatishlari -------------------

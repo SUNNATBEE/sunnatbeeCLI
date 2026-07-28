@@ -8,6 +8,9 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 ## [Nashr qilinmagan]
 
 ### Qo'shildi
+- **Logotip endi TO'LIQ "AIDEVIX" so'zi** (ilgari "AD" monogrammasi edi).
+  52 ustundan tor terminalda monogrammaga qaytadi — to'liq so'z 49 ustun
+  egallaydi va tor oynada o'ralib, maketni buzardi.
 - **Banner animatsiyasi qaytdi** — logo qatorma-qator ochiladi va gradient
   bilan (moviy → siyoh → ko'k) chiziladi. Butun effekt ~0.35 s (Windows'da
   ~0.8 s). FAQAT jonli 256-rangli terminalda; `CI`, `AI_NO_ANIM`, `NO_COLOR`,

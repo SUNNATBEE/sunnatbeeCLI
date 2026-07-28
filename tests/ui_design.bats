@@ -320,3 +320,31 @@ SH
   run bash -c "CI=1 FORCE_COLOR=1 TERM=xterm-256color . '$COMMON'; echo \"anim=\$AI_ANIM\""
   [[ "$output" == *"anim=0"* ]]
 }
+
+@test "banner: keng terminalda TO'LIQ 'AIDEVIX' so'zi chiziladi" {
+  # Brend: monogramma emas, to'liq so'z (ANSI Shadow uslubi).
+  # ESLATMA: kenglikni BELGILAB o'lchamaymiz — testlar LC_ALL=C bilan ishlaydi,
+  # u yerda box-drawing belgisi 3 BAYT va har qanday length() yanglishadi.
+  # Shuning uchun MAZMUN bo'yicha tekshiramiz.
+  # COLUMNS ni source'dan KEYIN qo'yamiz va ui_width keshini tozalaymiz —
+  # `COLUMNS=100 . file` shakli builtin'ga ta'sir qilmaydi (kenglik 80 bo'lib
+  # qolardi va test tasodifan o'tardi).
+  run bash -c "FORCE_COLOR=1 TERM=xterm-256color . '$COMMON'
+                COLUMNS=100; UI_COLS=''; UI_UTF8=1; AI_ANIM=0
+                banner_full 'Aidevix' 2>&1"
+  [ "$status" -eq 0 ]
+  # Bu bo'lak FAQAT to'liq "AIDEVIX" logosida bor (AD monogrammasida yo'q).
+  [[ "$output" == *'██╗██████╗ ███████╗'* ]]
+}
+
+@test "banner: TOR terminalda 'AD' monogrammasiga tushadi (o'ralib ketmaydi)" {
+  # To'liq so'z 49 ustun egallaydi — 44 ustunli oynada o'ralib, maketni buzardi.
+  run bash -c "FORCE_COLOR=1 TERM=xterm-256color . '$COMMON'
+                COLUMNS=44; UI_COLS=''; UI_UTF8=1; AI_ANIM=0
+                banner_full 'Aidevix' 2>&1"
+  [ "$status" -eq 0 ]
+  # To'liq so'zning belgisi BO'LMASLIGI kerak.
+  [[ "$output" != *'██╗██████╗ ███████╗'* ]]
+  # AD monogrammasi esa bor.
+  [[ "$output" == *'█████╗ ██████╗'* ]]
+}

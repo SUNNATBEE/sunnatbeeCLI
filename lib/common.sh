@@ -225,14 +225,29 @@ banner_full() {
   # Tezlik: butun effekt ~0.35 s (6 qator × 55 ms) va tsiklda FORK YO'Q —
   # kutish `read -t` builtin'i bilan (qarang ui_anim_wait).
   if [[ "${UI_UTF8:-1}" -eq 1 ]]; then
-    local -a logo=(
+    # To'liq "AIDEVIX" so'zi 47 belgi (+2 otstup) egallaydi. Terminal shuncha
+    # keng bo'lmasa — "AD" monogrammasiga tushamiz (ui_width 40 da pol qo'yadi,
+    # ya'ni tor oynada to'liq so'z o'ralib ketardi).
+    local -a logo
+    if [[ "$(ui_width)" -ge 52 ]]; then
+      logo=(
+'   █████╗ ██╗██████╗ ███████╗██╗   ██╗██╗██╗  ██╗'
+'  ██╔══██╗██║██╔══██╗██╔════╝██║   ██║██║╚██╗██╔╝'
+'  ███████║██║██║  ██║█████╗  ██║   ██║██║ ╚███╔╝ '
+'  ██╔══██║██║██║  ██║██╔══╝  ╚██╗ ██╔╝██║ ██╔██╗ '
+'  ██║  ██║██║██████╔╝███████╗ ╚████╔╝ ██║██╔╝ ██╗'
+'  ╚═╝  ╚═╝╚═╝╚═════╝ ╚══════╝  ╚═══╝  ╚═╝╚═╝  ╚═╝'
+      )
+    else
+      logo=(
 '   █████╗ ██████╗ '
 '  ██╔══██╗██╔══██╗'
 '  ███████║██║  ██║'
 '  ██╔══██║██║  ██║'
 '  ██║  ██║██████╔╝'
 '  ╚═╝  ╚═╝╚═════╝ '
-    )
+      )
+    fi
     local row i=0
     if [[ "${AI_ANIM:-0}" -eq 1 && "${UI_DEPTH:-0}" == "256" ]]; then
       hide_cursor

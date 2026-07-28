@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck shell=bash
-# shellcheck disable=SC2154  # MSG_EN i18n.sh'da declare -A qilingan
+# shellcheck disable=SC2154,SC2034  # MSG_EN i18n.sh'da `declare -gA` qilinadi va
+#                                   # t()/t_v() tomonidan o'qiladi (shu fayl emas)
 #
 # lib/i18n/en.sh — Aidevix CLI inglizcha tarjima katalogi.
 #
@@ -294,3 +295,65 @@ MSG_EN["menyu"]="the menu"
 MSG_EN["agent o'rnatish"]="the agent installation"
 MSG_EN["agentni ishga tushirish"]="the agent launch"
 MSG_EN["joriy amal"]="the current operation"
+
+# ===========================================================================
+#  UI QAYTA DIZAYNI (v1.8) — dizayn tizimi matnlari
+# ===========================================================================
+
+# --- Tafsilot paneli (o'ng ustun) va ro'yxat ustunlari ---------------------
+MSG_EN["agentlar"]="agents"
+MSG_EN["buyruq"]="command"
+MSG_EN["guruh"]="group"
+MSG_EN["provayder"]="provider"
+MSG_EN["login"]="auth"
+MSG_EN["havola"]="docs"
+MSG_EN["o'rnatish"]="install"
+MSG_EN["yo'q"]="missing"
+MSG_EN["konfiguratsiya: %s"]="config: %s"
+
+# --- Auth sinflari (emoji o'rniga semantik nomlar) -------------------------
+MSG_EN["bepul"]="free"
+MSG_EN["brauzer login"]="browser login"
+MSG_EN["API kalit"]="API key"
+MSG_EN["obuna"]="subscription"
+
+# --- Menyu: qidiruv, footer, holat ----------------------------------------
+MSG_EN["qidirish"]="search"
+MSG_EN["Moslik yo'q — Backspace bilan qidiruvni tahrirlang."]="No matches — press Backspace to edit the search."
+MSG_EN["harakat"]="move"
+MSG_EN["ishga tushirish"]="launch"
+MSG_EN["chiqish"]="quit"
+MSG_EN["ishga tushirilmoqda"]="launching"
+
+# --- Status bar -----------------------------------------------------------
+MSG_EN["kalit bor"]="key set"
+MSG_EN["kalit yo'q"]="no key"
+MSG_EN["%s/%s o'rnatilgan"]="%s/%s installed"
+MSG_EN["yangilanish: %s"]="update: %s"
+MSG_EN["eng so'nggi"]="up to date"
+
+# --- Banner kichik sarlavhalari -------------------------------------------
+MSG_EN["bepul agentlar — login/kalitsiz yoki bepul tier"]="free agents — no login/key required, or a free tier"
+MSG_EN["eng mashhur agentlar"]="most popular agents"
+
+# --- Ikonka pog'onasi (--icons) -------------------------------------------
+MSG_EN["Ikonka uslubi: %s"]="Icon style: %s"
+MSG_EN["Ikonka uslubi o'rnatildi: %s"]="Icon style set to: %s"
+MSG_EN["Noto'g'ri ikonka uslubi: %s (nerd|unicode|ascii|auto)"]="Invalid icon style: %s (nerd|unicode|ascii|auto)"
+MSG_EN["Nerd Font topildi — nerd ikonkalari yoqildi."]="Nerd Font detected — nerd icons enabled."
+MSG_EN["Nerd Font topilmadi — unicode ikonkalariga o'tildi."]="No Nerd Font found — falling back to unicode icons."
+MSG_EN["Belgilar kvadrat bo'lib ko'rinsa: aidevix --icons unicode"]="If the glyphs look like boxes: aidevix --icons unicode"
+MSG_EN["• Ba'zilari PULLIK, ba'zilari bepul yoki bepul tier — menyuda ko'rasiz:"]="• Some are PAID, some are free or free-tier — the menu shows:"
+
+# --- doctor (tashxis) qayta dizayni ---------------------------------------
+MSG_EN["tashxis"]="doctor"
+MSG_EN["Interfeys:"]="Interface:"
+MSG_EN["ikonkalar"]="icons"
+MSG_EN["ranglar"]="colors"
+MSG_EN["til"]="language"
+MSG_EN["eni"]="width"
+MSG_EN["holat"]="state"
+MSG_EN["kesh"]="cache"
+MSG_EN["YO'Q: %s  (aidevix uni o'zi qo'shadi)"]="MISSING: %s  (aidevix adds it itself)"
+MSG_EN["YO'Q: %s"]="MISSING: %s"
+MSG_EN["hali yo'q (keyingi menyuda yangilanadi)"]="not yet (refreshed on the next menu)"

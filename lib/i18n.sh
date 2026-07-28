@@ -33,7 +33,17 @@ aidevix_detect_lang() {
 AIDEVIX_LANG_RESOLVED="$(aidevix_detect_lang)"
 
 # Inglizcha katalog. Faqat "en" rejimida yuklanadi (uz uchun keraksiz I/O yo'q).
-declare -A MSG_EN
+# `-g` SHART: bu fayl funksiya ichidan ham `source` qilinadi (testlarda
+# load_selector, ishlab chiqarishda aidevix_set_lang). `-g` bo'lmasa massiv
+# O'SHA FUNKSIYAGA LOKAL bo'lib qoladi va chiqishda yo'qoladi — keyin
+# `${MSG_EN[$kalit]}` assotsiativ emas, INDEKSLI massiv sifatida o'qilib,
+# kalitni arifmetik hisoblashga urinadi ("syntax error: operand expected")
+# va tarjima jim ishlamay qo'yadi.
+# `=()` ham SHART: `declare -gA MSG_EN` massivni e'lon qiladi, lekin QIYMAT
+# BERMAYDI — shunda `${#MSG_EN[@]}` `set -u` ostida "unbound variable" bo'lib
+# skriptni JIMGINA yiqitadi. Aynan shu sabab `aidevix --lang en` hech narsa
+# chiqarmasdan 1 kod bilan to'xtardi (aidevix_set_lang ichidagi tekshiruv).
+declare -gA MSG_EN=()
 if [[ "$AIDEVIX_LANG_RESOLVED" == "en" ]]; then
   __i18n_dir="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
   if [[ -r "$__i18n_dir/i18n/en.sh" ]]; then
@@ -42,6 +52,25 @@ if [[ "$AIDEVIX_LANG_RESOLVED" == "en" ]]; then
   fi
   unset __i18n_dir
 fi
+
+# t_v <var> <manba> [argumentlar...] — t() ning FORK'SIZ varianti: natijani
+# stdout'ga emas, o'zgaruvchiga yozadi. `$(t ...)` — buyruq-almashtirish, ya'ni
+# har chaqiruvda fork; konfiguratsiyani o'qish (parse_agents) va menyu chizish
+# yo'llarida bu yuzlab fork bo'lib, Windows/MSYS'da sezilarli sekinlashtiradi.
+t_v() {
+  local __v="$1" __src="$2"; shift 2
+  local __out="$__src"
+  # `+x` — bo'sh tarjima ham hisobga olinsin (t() bilan bir xil semantika).
+  if [[ "${AIDEVIX_LANG_RESOLVED:-uz}" == "en" && -n "${MSG_EN[$__src]+x}" ]]; then
+    __out="${MSG_EN[$__src]}"
+  fi
+  if (( $# )); then
+    # shellcheck disable=SC2059  # $__out — ataylab format-satr
+    printf -v "$__v" "$__out" "$@"
+  else
+    printf -v "$__v" '%s' "$__out"
+  fi
+}
 
 # aidevix_set_lang <uz|en> — tilni MAJBURAN o'rnatadi (picker yoki saqlangan
 # tanlovdan keyin). Kerak bo'lsa inglizcha katalogni yuklaydi.

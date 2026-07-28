@@ -64,6 +64,11 @@ LANG_FILE="$STATE_DIR/lang"
 # yozadi — keyingi aidevix sessiyalari uni ko'rmay har safar qayta "o'rnatish"
 # so'rardi. Shu kesh tufayli bir marta topilgan papka doim PATH'ga qo'shiladi.
 BIN_DIR_CACHE="$STATE_DIR/bin_dirs"
+# npm/python prefikslari keshi. Ularni aniqlash node/python jarayonini ishga
+# tushiradi (Windows'da ~2.5 s va ~1 s) va bu HAR ishga tushishda takrorlanardi.
+# Qiymat amalda o'zgarmaydi; kesh papkasi yo'qolsa avtomatik qayta aniqlanadi.
+NPM_PREFIX_CACHE="$STATE_DIR/npm_prefix"
+PY_USERBASE_CACHE="$STATE_DIR/py_userbase"
 
 # --- Global statistika (OPT-IN — standart o'CHIQ) -------------------------
 # Foydalanuvchi YOQSAGINA (aidevix --stats on) ishlaydi. Yoqilganda: agent
@@ -83,6 +88,15 @@ GLOBAL_HINT_FILE="$STATE_DIR/global_stats_hint"      # bir martalik eslatma ko'r
 NPM_PKG="aidevix"                                    # npm registry'dagi paket nomi
 NPM_LATEST_CACHE="$STATE_DIR/npm_latest"             # eng so'nggi versiya keshi
 NPM_CHECK_STAMP="$STATE_DIR/npm_check"               # tekshirishni throttle vaqti
+# Oxirgi O'LCHANGAN tarmoq javob vaqti (curl %{time_total}, sekundda) —
+# status bardagi "ms" ko'rsatkichi shu fayldan o'qiladi.
+LATENCY_FILE="$STATE_DIR/latency"
+# Katta brend bloki BIR MARTA (ilk ishga tushishda) ko'rsatilganini belgilaydi;
+# keyingi safarlar ixcham sarlavha bilan ochiladi (qarang lib/common.sh: banner).
+# shellcheck disable=SC2034  # lib/common.sh: banner() uni dinamik ko'radi
+BANNER_SEEN_FILE="$STATE_DIR/seen_banner"
+# Foydalanuvchi tanlagan ikonka pog'onasi (nerd/unicode/ascii) — `--icons`.
+ICONS_FILE="$STATE_DIR/icons"
 
 # --- O'rnatilgan agentlarni avtomatik yangilash ---------------------------
 # Har agent uchun "oxirgi yangilash urinishi" vaqti shu papkada saqlanadi.
@@ -99,6 +113,9 @@ DEFAULT_CATEGORY="AI"
 TOP_AGENTS="claude codex gemini copilot cursor-agent aider opencode qwen codebuff freebuff"
 
 # --- Umumiy yordamchilarni yuklash ----------------------------------------
+# ui.sh (common.sh ichidan yuklanadi) ikonka pog'onasi keshini shu papkada
+# saqlaydi — testlar STATE_DIR'ni almashtirsa, kesh ham u bilan ko'chadi.
+export AIDEVIX_STATE_DIR="$STATE_DIR"
 LIB="$PROJECT_ROOT/lib/common.sh"
 if [[ ! -r "$LIB" ]]; then
   printf '[x] Kutubxona topilmadi: %s\n' "$LIB" >&2
@@ -214,7 +231,7 @@ crash() {
   if command -v is_npm_install >/dev/null 2>&1 && ! is_npm_install && [[ -d "$PROJECT_ROOT/.git" ]]; then
     upd="aidevix --update"
   fi
-  panel "$(t "⚠  YANGILANG — bu xato yangi versiyada tuzatilgan bo'lishi mumkin")" \
+  ui_notice err "$(t "⚠  YANGILANG — bu xato yangi versiyada tuzatilgan bo'lishi mumkin")" \
     "" \
     "$(t 'Terminalga shu buyruqni yozing:')" \
     "" \
@@ -235,29 +252,33 @@ Aidevix CLI — manage your terminal AI CLI agents from a single menu.
 
 NOTE: Aidevix is only a launcher — it installs and opens third-party AI CLIs.
 It does NOT answer your prompts and does NOT provide any API key/token. Some
-listed CLIs are paid, some are free/free-tier (see 🆓/🔑/💳 badges).
+listed CLIs are paid, some are free or free-tier — the menu shows which.
 
 USAGE:
   aidevix [OPTION | AGENT]
 
 OPTIONS:
-  (no argument)   Open the interactive menu (fzf if available, otherwise a
-                  built-in ↑/↓ arrow menu with live details; numbered as a
-                  last resort when there is no terminal)
+  (no argument)   Open the interactive menu: a two-column browser with the
+                  agent list on the left and details on the right (fzf when
+                  available, otherwise the built-in arrow menu; a numbered
+                  menu as a last resort when there is no terminal)
   AGENT           Launch an agent directly by name or binary
                   (e.g. `aidevix claude`, `aidevix gemini`)
   -l, --list      List agents and their status
-  -f, --free      Open a menu of FREE agents only (🆓 / free tier)
+  -f, --free      Open a menu of FREE agents only (no key/login, or free tier)
   -t, --top       Open a menu of the most popular (top) agents only
   -u, --update    Update all installed agents
   -d, --doctor    Check the environment (node/npm/python/fzf, PATH, agents)
   -a, --add       Add a new agent interactively
   -s, --stats [on|off]
                   Global stats (opt-in): show status, or turn on/off.
-                  When on, the menu shows "🔥 #rank". Only the agent name +
-                  event type are sent (no personal data). Default: off.
+                  When on, the menu shows a popularity rank. Only the agent
+                  name + event type are sent (no personal data). Default: off.
   -L, --lang [en|uz]
                   Choose the interface language (asked on first run), or set it
+  -i, --icons [nerd|unicode|ascii|auto]
+                  Icon style. Detected automatically (Nerd Font -> unicode ->
+                  ascii); use this to force a style or re-run detection.
   -v, --version   Show the Aidevix CLI version
   -h, --help      Show this help text
 
@@ -276,29 +297,32 @@ Aidevix CLI — terminaldagi AI CLI agentlarini bitta menyudan boshqaring.
 
 ESLATMA: Aidevix faqat ishga tushirgich — uchinchi-tomon AI CLI'larni o'rnatib,
 ochib beradi. U savollarga JAVOB BERMAYDI va API kalit/token BERMAYDI. Ro'yxatdagi
-ba'zi CLI'lar pullik, ba'zilari bepul/bepul tier (🆓/🔑/💳 belgilariga qarang).
+ba'zi CLI'lar pullik, ba'zilari bepul yoki bepul tier — menyuda ko'rinadi.
 
 FOYDALANISH:
   aidevix [TANLOV | AGENT]
 
 TANLOVLAR:
-  (argumentsiz)   Interaktiv menyuni ochadi (fzf bo'lsa fzf; bo'lmasa ichki
-                  ↑/↓ ko'rsatkichli menyu — tafsilot bilan; terminal bo'lmasa
-                  oxirgi chora sifatida raqamli)
+  (argumentsiz)   Interaktiv menyuni ochadi: chapda agentlar ro'yxati, o'ngda
+                  tanlangan agent tafsiloti (fzf bo'lsa fzf; bo'lmasa ichki
+                  ko'rsatkichli menyu; terminal bo'lmasa — raqamli)
   AGENT           Agentni nomi yoki binari bo'yicha to'g'ridan-to'g'ri ishga tushiradi
                   (masalan: `aidevix claude`, `aidevix gemini`)
   -l, --list      Agentlar ro'yxati va holatini ko'rsatadi
-  -f, --free      Faqat BEPUL agentlar menyusini ochadi (🆓 / bepul tier)
+  -f, --free      Faqat BEPUL agentlar menyusini ochadi (kalit/loginsiz yoki bepul tier)
   -t, --top       Faqat eng mashhur (top) agentlar menyusini ochadi
   -u, --update    O'rnatilgan barcha agentlarni yangilaydi
   -d, --doctor    Muhitni tekshiradi (node/npm/python/fzf, PATH, agentlar)
   -a, --add       Interaktiv tarzda yangi agent qo'shadi
   -s, --stats [on|off]
                   Global statistika (opt-in): holatni ko'rsatadi yoki yoqadi/o'chiradi.
-                  Yoqilganda menyuda "🔥 #reyting" ko'rinadi. Faqat agent nomi +
-                  hodisa turi yuboriladi (shaxsiy ma'lumotsiz). Standart — o'chiq.
+                  Yoqilganda menyuda mashhurlik reytingi ko'rinadi. Faqat agent
+                  nomi + hodisa turi yuboriladi (shaxsiy ma'lumotsiz). Std — o'chiq.
   -L, --lang [en|uz]
                   Interfeys tilini tanlash (ilk ishga tushishda so'raladi) yoki o'rnatish
+  -i, --icons [nerd|unicode|ascii|auto]
+                  Ikonka uslubi. Avtomatik aniqlanadi (Nerd Font -> unicode ->
+                  ascii); bu bilan majburan tanlash yoki qayta aniqlash mumkin.
   -v, --version   Aidevix CLI versiyasini ko'rsatadi
   -h, --help      Ushbu yordam matnini ko'rsatadi
 
@@ -354,7 +378,146 @@ build_merged_config() {
   printf '%s\n' "$out"
 }
 
-trim() { printf '%s' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
+# trim <matn> — boshi/oxiridagi bo'shliqlarni oladi.
+# SOF BASH (ilgari `printf | sed` edi = HAR chaqiruvda IKKI fork). parse_agents
+# har agent uchun 8 marta chaqiradi: 28 agentda bu ~450 fork edi. Windows/MSYS'da
+# fork ~50-150 ms va cheklangan resurs — natijada menyu ochilishi sekinlashib,
+# yuklama ostida "fork: Resource temporarily unavailable" xatosi chiqardi.
+trim() { local s="$1"; trim_v s "$s"; printf '%s' "$s"; }
+
+# trim_v <var> <matn> — fork'siz variant (natija o'zgaruvchiga).
+# Ichki lokallar `__` bilan boshlanadi — chaqiruvchi bergan NOM bilan to'qnashib
+# qolmasligi uchun (qarang lib/ui.sh dagi "NOM ORQALI QAYTARUVCHI" izohi).
+trim_v() {
+  local __v="$1" __s="$2"
+  while [[ "$__s" == [$' \t\r\n']* ]]; do __s="${__s#?}"; done
+  while [[ "$__s" == *[$' \t\r\n'] ]]; do __s="${__s%?}"; done
+  printf -v "$__v" '%s' "$__s"
+}
+
+# ===========================================================================
+#  MA'LUMOTNI NORMALLASHTIRISH: emoji → semantik maydonlar
+# ===========================================================================
+#
+# config/agents.conf va tarjimalarda emoji ATAYLAB saqlanadi — ular
+# foydalanuvchi configlari va i18n kalitlari bilan MOSLIKNI ta'minlaydi.
+# Interfeys esa emoji ko'rsatmaydi: parse bosqichida emoji matndan olinadi
+# va SEMANTIK maydonga (authclass) aylantiriladi, chizishda esa o'sha maydon
+# ikonkaga aylanadi (lib/ui.sh). Shu tufayli:
+#   • bitta agent bir joyda 🔑, boshqa joyda "key" deb yozilgan bo'lsa ham
+#     interfeys bir xil ko'rinadi;
+#   • Nerd Font/ASCII pog'onalari avtomatik ishlaydi.
+
+# Emoji tozalash lib/ui.sh dagi ui_deemoji_v() da (bitta ta'rif — bitta emoji
+# ro'yxati). Bu yerda `strip_emoji` qobig'i bor edi, lekin uni HECH KIM
+# chaqirmasdi: tsikldagi kod ui_deemoji_v ni to'g'ridan-to'g'ri chaqiradi
+# (`$(strip_emoji ...)` fork bo'lardi), shuning uchun olib tashlandi.
+
+# classify_auth <auth> — login talabini SEMANTIK sinfga aylantiradi:
+#   free    — kalit/login shart emas yoki bepul tier
+#   browser — agent o'zi brauzer orqali login qiladi
+#   key     — foydalanuvchi API kalit olishi kerak
+#   paid    — obuna talab qilinadi
+#   none    — talab ko'rsatilmagan
+# Emoji ham, matn ham (uz/en) tushuniladi — user configlari buzilmaydi.
+# Tartib MUHIM: 🆓 bepul tier boshqa belgilar bilan birga kelsa ham ustun.
+# classify_auth_v <var> <auth> — fork'siz variant (${a,,} bash 4 bilan).
+classify_auth_v() {
+  local __v="$1" __a="$2" __l __r='none'
+  if [[ -z "$__a" ]]; then printf -v "$__v" '%s' 'none'; return 0; fi
+  __l="${__a,,}"
+  case "$__a$__l" in
+    *🆓*|*bepul*|*free*)                          __r='free' ;;
+    *🌐*|*login*|*brauzer*|*browser*)             __r='browser' ;;
+    *🔑*|*api*|*kalit*|*key*|*token*)             __r='key' ;;
+    *💳*|*obuna*|*subscription*|*plan*|*pro/max*) __r='paid' ;;
+  esac
+  printf -v "$__v" '%s' "$__r"
+}
+classify_auth() { local r; classify_auth_v r "$1"; printf '%s' "$r"; }
+
+# auth_icon <sinf> — auth sinfiga mos ikonka + rang (satr QAYTARADI).
+auth_icon() {
+  case "$1" in
+    free)    printf '%s%s%s' "$UI_OK"    "${ICO[free]}"    "$UI_R" ;;
+    browser) printf '%s%s%s' "$UI_INFO"  "${ICO[globe]}"   "$UI_R" ;;
+    key)     printf '%s%s%s' "$UI_WARN"  "${ICO[key]}"     "$UI_R" ;;
+    paid)    printf '%s%s%s' "$UI_AI"    "${ICO[card]}"    "$UI_R" ;;
+    *)       printf '%s%s%s' "$UI_FAINT" "${ICO[bullet]}"  "$UI_R" ;;
+  esac
+}
+
+# auth_label <sinf> — auth sinfining o'qiladigan nomi.
+auth_label() {
+  case "$1" in
+    free)    t 'bepul' ;;
+    browser) t 'brauzer login' ;;
+    key)     t 'API kalit' ;;
+    paid)    t 'obuna' ;;
+    *)       printf '%s' '—' ;;
+  esac
+}
+
+# detect_provider <binary> <install> <url> — agentning provayderini aniqlaydi.
+# Status barda ko'rsatiladi. Manba tartibi: URL domeni → install paketi → binary.
+# detect_provider_v <var> <binary> <install> <url> — fork'siz variant.
+detect_provider_v() {
+  local __v="$1" __s="${4} ${3} ${2}"
+  __s="${__s,,}"
+  # TARTIB MUHIM: ko'p agentlarning havolasi github.com'da turadi, shuning
+  # uchun umumiy `*github*` naqshi ENG OXIRIDA tekshiriladi — aks holda
+  # Qwen/Crush kabi agentlar "github" deb belgilanib qolardi.
+  local __r
+  case "$__s" in
+    *anthropic*|*claude*)         __r='anthropic' ;;
+    *openai*|*codex*)             __r='openai' ;;
+    *google*|*gemini*|*aistudio*) __r='google' ;;
+    *qwen*|*alibaba*|*dashscope*) __r='qwen' ;;
+    *mistral*)                    __r='mistral' ;;
+    *openrouter*)                 __r='openrouter' ;;
+    *deepseek*)                   __r='deepseek' ;;
+    *groq*)                       __r='groq' ;;
+    *ollama*|*llama*)             __r='ollama' ;;
+    *cursor*)                     __r='cursor' ;;
+    *aider*)                      __r='aider' ;;
+    *charm*|*crush*)              __r='charm' ;;
+    *copilot*)                    __r='github' ;;
+    *github.com*)                 __r='github' ;;
+    *)                            __r='local' ;;
+  esac
+  printf -v "$__v" '%s' "$__r"
+}
+detect_provider() { local r; detect_provider_v r "$1" "$2" "$3"; printf '%s' "$r"; }
+
+# provider_key_var <provayder> — o'sha provayderning standart API-kalit
+# muhit o'zgaruvchisi nomi (status barda "kalit bor/yo'q" uchun).
+provider_key_var() {
+  case "$1" in
+    anthropic)  printf 'ANTHROPIC_API_KEY' ;;
+    openai)     printf 'OPENAI_API_KEY' ;;
+    google)     printf 'GEMINI_API_KEY' ;;
+    mistral)    printf 'MISTRAL_API_KEY' ;;
+    openrouter) printf 'OPENROUTER_API_KEY' ;;
+    deepseek)   printf 'DEEPSEEK_API_KEY' ;;
+    groq)       printf 'GROQ_API_KEY' ;;
+    *)          printf '' ;;
+  esac
+}
+
+# provider_model_var <provayder> — agent qaysi modelni ishlatishini MUHITDAN
+# o'qish uchun o'zgaruvchi nomi. Bu YAGONA halol manba: Aidevix modelni
+# o'zi tanlamaydi va API'ga murojaat qilmaydi, shuning uchun foydalanuvchi
+# o'rnatgan qiymat bo'lmasa — status barda "—" ko'rsatiladi.
+provider_model_var() {
+  case "$1" in
+    anthropic)  printf 'ANTHROPIC_MODEL' ;;
+    openai)     printf 'OPENAI_MODEL' ;;
+    google)     printf 'GEMINI_MODEL' ;;
+    ollama)     printf 'OLLAMA_MODEL' ;;
+    openrouter) printf 'OPENROUTER_MODEL' ;;
+    *)          printf '' ;;
+  esac
+}
 
 # --- O'rnatish buyrug'i qaysi dasturga tayanishini aniqlash ----------------
 # Masalan "npm install -g ..." → "npm". Bu dastur yo'q bo'lsa, oldindan
@@ -458,7 +621,7 @@ stats_cmd() {
   case "$arg" in
     on)
       set_global_stats on
-      panel "$(t '📊 Global statistika YOQILDI')" \
+      ui_notice ok "$(t '📊 Global statistika YOQILDI')" \
         "$(t 'Rahmat! Endi agent ishga tushganda FAQAT quyidagi yuboriladi:')" \
         "$(t '    • agent nomi (masalan "Claude Code")')" \
         "$(t '    • hodisa turi (install yoki launch)')" \
@@ -475,7 +638,7 @@ stats_cmd() {
     ''|status)
       local state; state="$(t "o'chiq (opt-in)")"
       global_stats_enabled && state="$(t 'yoqilgan')"
-      panel "$(t '📊 Global statistika — holat: %s' "$state")" \
+      ui_notice info "$(t '📊 Global statistika — holat: %s' "$state")" \
         "$(t 'Server:   %s' "$AIDEVIX_STATS_URL")" \
         "$(t "Yuboriladi (yoqilganda): agent nomi + hodisa turi (shaxsiy ma'lumotsiz)")" \
         "" \
@@ -561,7 +724,7 @@ maybe_global_hint() {
   [[ -n "${CI:-}" ]] && return 0
   mkdir -p "$STATE_DIR" 2>/dev/null || return 0
   : >"$GLOBAL_HINT_FILE" 2>/dev/null || true
-  panel "$(t '💡 Maslahat — global statistika (ixtiyoriy)')" \
+  ui_notice info "$(t '💡 Maslahat — global statistika (ixtiyoriy)')" \
     "$(t 'Qaysi AI CLI dunyoda eng mashhurligini menyuda ko'\''rmoqchimisiz?')" \
     "    aidevix --stats on" \
     "$(t "Yoqsangiz FAQAT agent nomi + hodisa turi yuboriladi (shaxsiy ma'lumotsiz).")" \
@@ -585,16 +748,16 @@ choose_language() {
   [[ -r "$LANG_FILE" ]] && return 0
   { : >/dev/tty; } 2>/dev/null || return 0
 
-  local B="${C_BOLD:-}" T="${C_TITLE:-}" R="${C_RESET:-}" Gy="${C_GRAY:-}"
   {
-    printf '\n  %s%s🌐  Til tanlang  /  Choose your language%s\n\n' "$B" "$T" "$R"
-    printf '     %s[1]%s English\n'   "$B" "$R"
-    printf '     %s[2]%s Oʻzbekcha\n\n' "$B" "$R"
-    printf '  %sEnter = avto / auto%s\n' "$Gy" "$R"
+    printf '\n  %s%s%s Til tanlang  /  Choose your language%s\n' \
+      "$UI_B" "$UI_BRAND" "${ICO[brand]}" "$UI_R"
+    printf '  %s\n\n' "$(ui_rule 40)"
+    printf '    %s%s1%s  English\n'    "$UI_B" "$UI_TEXT" "$UI_R"
+    printf '    %s%s2%s  Oʻzbekcha\n\n' "$UI_B" "$UI_TEXT" "$UI_R"
   } >/dev/tty
   local ans=""
   trap - ERR
-  printf '  %s[1/2]%s › ' "$B" "$R" >/dev/tty
+  printf '  %s%s%s %s1/2%s ' "$UI_FAINT" "${ICO[arrow]}" "$UI_R" "$UI_MUTED" "$UI_R" >/dev/tty
   IFS= read -r ans </dev/tty || ans=""
   trap 'crash "$BASH_COMMAND" "$LINENO"' ERR
 
@@ -630,6 +793,52 @@ lang_cmd() {
   esac
 }
 
+# --- Ikonka pog'onasi (`aidevix --icons`) ---------------------------------
+# Nerd Font mavjudligini Aidevix o'zi aniqlaydi (fontconfig / macOS shrift
+# papkalari / Windows reyestri) va natijani keshlaydi. Bu buyruq — qo'lda
+# boshqarish uchun: majburan tanlash yoki qayta aniqlash.
+#   aidevix --icons            → joriy uslubni ko'rsatadi
+#   aidevix --icons nerd|unicode|ascii → majburan o'rnatadi
+#   aidevix --icons auto       → keshni tashlab, qaytadan aniqlaydi
+icons_cmd() {
+  local arg="${1:-}"
+  case "$arg" in
+    '')
+      log_info "$(t 'Ikonka uslubi: %s' "${UI_ICON_TIER:-unicode}")"
+      # Namuna — foydalanuvchi belgilar TO'G'RI ko'rinayotganini o'zi ko'rsin.
+      printf '  %s%s %s %s %s %s %s %s%s\n' "$UI_MUTED" \
+        "${ICO[dot_on]}" "${ICO[dot_off]}" "${ICO[key]}" "${ICO[globe]}" \
+        "${ICO[card]}" "${ICO[free]}" "${ICO[star]}" "$UI_R" >&2
+      # Bu maslahat FAQAT nerd pog'onasida ma'noga ega — unicode/ascii
+      # belgilari har qanday shriftda chiziladi.
+      if [[ "${UI_ICON_TIER:-}" == "nerd" ]]; then
+        log_step "$(t "Belgilar kvadrat bo'lib ko'rinsa: aidevix --icons unicode")"
+      fi
+      ;;
+    nerd|unicode|ascii)
+      mkdir -p "$STATE_DIR" 2>/dev/null || true
+      atomic_write "$ICONS_FILE" "$arg" || true
+      ui_icons_set "$arg"
+      log_success "$(t "Ikonka uslubi o'rnatildi: %s" "$arg")"
+      ;;
+    auto)
+      rm -f "$ICONS_FILE" "$STATE_DIR/icons_cache" 2>/dev/null || true
+      if ui_icons_probe_nerd; then
+        ui_icons_set nerd
+        log_success "$(t 'Nerd Font topildi — nerd ikonkalari yoqildi.')"
+      else
+        ui_icons_set unicode
+        log_info "$(t "Nerd Font topilmadi — unicode ikonkalariga o'tildi.")"
+      fi
+      mkdir -p "$STATE_DIR" 2>/dev/null \
+        && printf '%s\n' "$UI_ICON_TIER" >"$STATE_DIR/icons_cache" 2>/dev/null || true
+      ;;
+    *)
+      die 2 "$(t "Noto'g'ri ikonka uslubi: %s (nerd|unicode|ascii|auto)" "$arg")"
+      ;;
+  esac
+}
+
 # maybe_show_intro — Aidevix nima EKANLIGINI (va nima EMASligini) BIR MARTA
 # tushuntiradi. Ko'pchilik menyudagi CLI'larni "bepul" yoki "aidevix javob
 # beradi" deb o'ylaydi — bu chalkashlikni oldindan oldini olamiz.
@@ -638,12 +847,13 @@ maybe_show_intro() {
   [[ -e "$INTRO_FILE" ]] && return 0
   mkdir -p "$STATE_DIR" 2>/dev/null || return 0
   : >"$INTRO_FILE" 2>/dev/null || true
-  panel "$(t 'ℹ️  Aidevix nima — va nima EMAS')" \
+  ui_notice ai "$(t 'ℹ️  Aidevix nima — va nima EMAS')" \
     "$(t 'Aidevix — faqat ishga tushirgich (launcher): AI CLI'\''larni siz uchun')" \
     "$(t 'o'\''rnatib, ochib beradi — xolos.')" \
     "" \
     "$(t '• CLI'\''larning O'\''ZI uchinchi tomon dasturlar (Anthropic, Google, OpenAI, ...).')" \
-    "$(t '• Ba'\''zilari PULLIK, ba'\''zilari bepul yoki bepul tier — menyuda 🆓 / 🔑 / 💳 belgisi.')" \
+    "$(t '• Ba'\''zilari PULLIK, ba'\''zilari bepul yoki bepul tier — menyuda ko'\''rasiz:')" \
+    "  $(auth_icon free) $(auth_label free)   $(auth_icon browser) $(auth_label browser)   $(auth_icon key) $(auth_label key)   $(auth_icon paid) $(auth_label paid)" \
     "$(t '• Aidevix savollarga JAVOB BERMAYDI va token/kalit BERMAYDI.')" \
     "$(t '  API kalitni o'\''zingiz tegishli xizmatdan olasiz; Aidevix uni ko'\''rmaydi.')"
 }
@@ -688,7 +898,7 @@ maybe_show_auth_note() {
 
   if [[ -n "$url" ]] && should_open_login_link "$auth"; then
     # Login/registratsiya kerak — sahifani brauzerda ochamiz.
-    panel "$(t "🔐 '%s' — login/kalit kerak" "$name")" \
+    ui_notice warn "$(t "🔐 '%s' — login/kalit kerak" "$name")" \
       "$(t 'Bu agentni ishlatish uchun API kalit kerak:')" \
       "    $auth" \
       "" \
@@ -702,7 +912,7 @@ maybe_show_auth_note() {
   elif [[ -n "$auth" ]]; then
     # Alohida loginga yo'naltirish SHART EMAS (kalit bor, agent o'zi login
     # qiladi, yoki bepul) — faqat qisqa eslatma beramiz, brauzer ochmaymiz.
-    panel "$(t "🔐 '%s' — eslatma" "$name")" \
+    ui_notice info "$(t "🔐 '%s' — eslatma" "$name")" \
       "$(t 'Login talabi: %s' "$auth")" \
       "$(t '👉 Agar agent login so'\''rasa, ekrandagi ko'\''rsatmaga amal qiling.')"
     [[ "${AI_ANIM:-0}" -eq 1 ]] && sleep 0.4 || true
@@ -737,21 +947,50 @@ augment_tool_path() {
   set +f
   [[ -n "$cleaned" ]] && PATH="$cleaned"
 
+  # npm/python prefikslarini KESHLAYMIZ. `npm config get prefix` node'ni
+  # ishga tushiradi va Windows'da ~2.5 s turadi, `python -m site` ~1 s —
+  # ular HAR ishga tushishda chaqirilgani uchun aidevix'ning o'zi sekin
+  # ochilardi. Prefiks amalda deyarli o'zgarmaydi, shuning uchun keshdan
+  # o'qiymiz va kesh yo'q/eskirgan (papka yo'qolgan) bo'lsagina qayta so'raymiz.
   if command -v npm >/dev/null 2>&1; then
-    prefix="$(npm config get prefix 2>/dev/null || true)"
+    prefix=""
+    if [[ -r "$NPM_PREFIX_CACHE" ]]; then
+      read -r prefix <"$NPM_PREFIX_CACHE" 2>/dev/null || prefix=""
+      # Kesh ishonchli bo'lishi uchun papka hali ham mavjudligini tekshiramiz.
+      [[ -n "$prefix" && -d "$prefix" ]] || prefix=""
+    fi
+    if [[ -z "$prefix" ]]; then
+      prefix="$(npm config get prefix 2>/dev/null || true)"
+      if [[ -n "$prefix" && "$prefix" != "undefined" && -d "$prefix" ]]; then
+        mkdir -p "$STATE_DIR" 2>/dev/null \
+          && printf '%s\n' "$prefix" >"$NPM_PREFIX_CACHE" 2>/dev/null || true
+      fi
+    fi
     if [[ -n "$prefix" && "$prefix" != "undefined" ]]; then
       # Unix'da binar $prefix/bin ichida, Windows'da $prefix ichida bo'ladi.
       dirs+=("$prefix/bin" "$prefix")
     fi
   fi
   # python3 Windows'da ko'pincha Store stub'i (user-base bermaydi) — haqiqiy
-  # natija chiqquncha python3, so'ng python bilan urinamiz.
-  local py
-  for py in python3 python; do
-    command -v "$py" >/dev/null 2>&1 || continue
-    userbase="$("$py" -m site --user-base 2>/dev/null || true)"
-    [[ -n "$userbase" ]] && break
-  done
+  # natija chiqquncha python3, so'ng python bilan urinamiz. Natija keshlanadi
+  # (yuqoridagi sabab bilan).
+  userbase=""
+  if [[ -r "$PY_USERBASE_CACHE" ]]; then
+    read -r userbase <"$PY_USERBASE_CACHE" 2>/dev/null || userbase=""
+    [[ -n "$userbase" && -d "$userbase" ]] || userbase=""
+  fi
+  if [[ -z "$userbase" ]]; then
+    local py
+    for py in python3 python; do
+      command -v "$py" >/dev/null 2>&1 || continue
+      userbase="$("$py" -m site --user-base 2>/dev/null || true)"
+      [[ -n "$userbase" ]] && break
+    done
+    if [[ -n "$userbase" ]]; then
+      mkdir -p "$STATE_DIR" 2>/dev/null \
+        && printf '%s\n' "$userbase" >"$PY_USERBASE_CACHE" 2>/dev/null || true
+    fi
+  fi
   if [[ -n "${userbase:-}" ]]; then
     # Windows-shakl yo'lni avval POSIX'ga o'giramiz — pastdagi glob ishlashi uchun.
     case "$userbase" in
@@ -853,14 +1092,18 @@ parse_agents() {
     [[ "$line" =~ ^[[:space:]]*$ ]] && continue
 
     IFS='|' read -r name binary command install desc category auth url <<<"$line"
-    name="$(trim "${name:-}")"
-    binary="$(trim "${binary:-}")"
-    command="$(trim "${command:-}")"
-    install="$(trim "${install:-}")"
-    desc="$(trim "${desc:-}")"
-    category="$(trim "${category:-}")"
-    auth="$(trim "${auth:-}")"
-    url="$(trim "${url:-}")"
+    # BUTUN shu blok ATAYLAB fork'siz (trim_v/t_v/classify_auth_v/... ).
+    # Ilgari har maydon `$(trim ...)` orqali o'tardi — bu 28 agentda ~450
+    # `sed` forki demakdi; MSYS'da menyu ochilishini soniyalarga cho'zib,
+    # yuklama ostida "fork: Resource temporarily unavailable" berardi.
+    trim_v name "${name:-}"
+    trim_v binary "${binary:-}"
+    trim_v command "${command:-}"
+    trim_v install "${install:-}"
+    trim_v desc "${desc:-}"
+    trim_v category "${category:-}"
+    trim_v auth "${auth:-}"
+    trim_v url "${url:-}"
     [[ -z "$category" ]] && category="$DEFAULT_CATEGORY"
 
     if [[ -z "$name" || -z "$binary" || -z "$command" ]]; then
@@ -869,11 +1112,27 @@ parse_agents() {
     fi
     # Agent izohi (desc) va login izohi (auth) — tanlangan tilga tarjima qilamiz
     # (en bo'lsa). Shunda menyu/preview/--list TO'LIQ bir tilda chiqadi (uz manba
-    # — kalit). Emoji belgilari (🆓/🌐/🔑/💳) tarjimada ham saqlanadi — filtr/badge
-    # ularga tayanadi.
-    [[ -n "$desc" ]] && desc="$(t "$desc")"
-    [[ -n "$auth" ]] && auth="$(t "$auth")"
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$desc" "$binary" "$command" "$install" "$category" "$auth" "$url"
+    # — kalit).
+    [[ -n "$desc" ]] && t_v desc "$desc"
+    [[ -n "$auth" ]] && t_v auth "$auth"
+
+    # Emoji SEMANTIK maydonlarga aylanadi, so'ng matndan olib tashlanadi.
+    # Klassifikatsiya TOZALASHDAN OLDIN bo'lishi shart — belgilar aynan
+    # shu yerda ma'no tashiydi (qarang classify_auth).
+    local authclass provider
+    classify_auth_v authclass "$auth"
+    detect_provider_v provider "$binary" "$install" "$url"
+    ui_deemoji_v desc "$desc"
+    ui_deemoji_v auth "$auth"
+    # ui_deemoji_v satr BOSHIDAGI otstupni ataylab saqlaydi (notice panellari
+    # uchun). desc/auth esa maket emas — MA'LUMOT maydoni: "🧠 Izoh" dan emoji
+    # olingach qolgan bo'shliq tafsilot panelida "│  Izoh" bo'lib ikkilanardi.
+    trim_v desc "$desc"
+    trim_v auth "$auth"
+
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$name" "$desc" "$binary" "$command" "$install" "$category" \
+      "$auth" "$url" "$authclass" "$provider"
     found=1
   done <"$config"
 
@@ -881,90 +1140,205 @@ parse_agents() {
 }
 
 # --- Holat ustuni bilan to'ldirilgan qatorlar -----------------------------
-# Chiqish formati: NAME\tDESC\tBINARY\tCOMMAND\tINSTALL\tCATEGORY\tSTATUS
+# Chiqish formati (11 maydon, TAB bilan):
+#   1 NAME  2 DESC  3 BINARY  4 COMMAND  5 INSTALL  6 CATEGORY
+#   7 STATUS  8 AUTH  9 URL  10 AUTHCLASS  11 PROVIDER
+#
+# STATUS endi emoji emas, MASHINA O'QIYDIGAN token: "installed" / "missing".
+# Ilgari u "✓ o'rnatilgan" edi — ya'ni belgi, rang va TARJIMA bitta satrga
+# aralashgan; har tekshiruv `*✓*` naqshiga tayanardi va ustun tekislash
+# bayt/ustun farqi tufayli buzilardi. Endi token — chizishda ikonkaga aylanadi.
 build_rows() {
   local config="$1" name desc binary command install category auth url status
+  local authclass provider
   # IFS=US (0x1f) — TAB whitespace bo'lgani uchun bo'sh maydonlarni "yutib" yuboradi
   # (masalan install bo'sh bo'lsa, keyingi maydonlar siljiydi). Shu sababli TAB'ni
   # non-whitespace ajratgich (\037)ga o'giramiz — bo'sh maydonlar saqlanadi.
-  while IFS=$'\037' read -r name desc binary command install category auth url; do
+  while IFS=$'\037' read -r name desc binary command install category auth url authclass provider; do
     if command -v "$binary" >/dev/null 2>&1; then
-      status="$(t "✓ o'rnatilgan")"
+      status="installed"
     else
-      status="$(t '✗ yo'\''q')"
+      status="missing"
     fi
-    # Maydon tartibi: status 7-, auth 8-, url 9- (preview/menu $7 status'ga tayanadi).
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-      "$name" "$desc" "$binary" "$command" "$install" "$category" "$status" "$auth" "$url"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$name" "$desc" "$binary" "$command" "$install" "$category" \
+      "$status" "$auth" "$url" "$authclass" "$provider"
   done < <(parse_agents "$config" | tr '\t' '\037')
 }
+
+# ESLATMA: bu yerda `count_installed` funksiyasi bor edi (rows'dan "28/31"
+# hisoblardi), lekin uni hech kim chaqirmasdi — status bar sanoqni menyuning
+# o'zida, `r_st[]` massividan bir o'tishda hisoblaydi (qarang select_with_arrows:
+# AGENT_COUNT). Ikkinchi nusxani saqlab turishning ma'nosi yo'q edi.
 
 # --- --list rejimi --------------------------------------------------------
 # Agentlar lokal ishlatish sanog'i bo'yicha KAMAYISH tartibida ko'rsatiladi
 # (eng ko'p ishlatilgan tepada); "MARTA" ustuni shu sanoqni ko'rsatadi.
 list_agents() {
   local config; config="$(resolve_config)"
-  log_info "$(t 'Konfiguratsiya: %s' "$config")"
   local statsfile="$STATS_FILE"; [[ -r "$statsfile" ]] || statsfile=/dev/null
-  printf '\n%s%-18s %-14s %-9s %-7s %-34s %s%s\n' "$C_BOLD" "$(t AGENT)" "$(t HOLAT)" "$(t GURUH)" "$(t MARTA)" "$(t IZOH)" "$(t LOGIN)" "$C_RESET"
-  printf '%s\n' "-------------------------------------------------------------------------------------------------"
-  local name desc binary command install category status auth url count color icon label
-  while IFS=$'\037' read -r name desc binary command install category status auth url count; do
-    if [[ "$status" == *"✓"* ]]; then color="$C_GREEN"; else color="$C_RED"; fi
-    # ✓/✗ belgisi 3 bayt (1 ustun) — `%-Ns` baytlab to'ldirgani uchun emoji'ni
-    # to'ldirish maydonidan TASHQARIDA chiqaramiz; faqat ASCII holat matnini
-    # to'ldiramiz (bayt=ustun → ustunlar to'g'ri tekislanadi). Qarang preview/menu.
-    icon="${status%% *}"   # ✓ yoki ✗
-    label="${status#* }"   # holat matni (o'rnatilgan/yo'q/installed/missing)
-    printf '%-18s %b%s %-12s%b %-9s %-7s %-34s %s\n' "$name" "$color" "$icon" "$label" "$C_RESET" "$category" "${count}×" "$desc" "$auth"
+  local w; w="$(ui_width)"
+  local dw=$(( w - 60 )); (( dw < 16 )) && dw=16
+
+  # `--list` — MA'LUMOT beruvchi buyruq: chiqishi STDOUT'ga ketadi, shunda
+  # `aidevix --list | grep ...` ishlaydi (log/menyu esa stderr'da qoladi).
+  local UI_FD=1
+  ui_header "${UI_MUTED}$(t 'agentlar')${UI_R}"
+  printf '  %s%-20s %-14s %-10s %-2s%5s   %s%s\n' "$UI_MUTED" \
+    "$(t AGENT)" "$(t HOLAT)" "$(t GURUH)" "" "$(t MARTA)" "$(t IZOH)" "$UI_R"
+
+  # Takrorlanuvchi bo'laklarni BIR MARTA tayyorlaymiz. Tsikl ichida `$(...)`
+  # ishlatish 28 qatorda ~140 fork demakdi — MSYS'da (~85 ms/fork) bu
+  # `--list` ni 12 soniyaga cho'zardi. Endi tsiklda fork YO'Q.
+  detail_init
+  local B_ON B_OFF
+  B_ON="$(ui_badge ok "$(t "o'rnatilgan")")"
+  B_OFF="${UI_FAINT}${ICO[dot_off]} $(t "yo'q")${UI_R}"
+
+  local name desc binary command install category status auth url authclass provider count
+  local badge used cname cbadge ccat cdesc
+  while IFS=$'\037' read -r name desc binary command install category status auth url authclass provider count; do
+    if [[ "$status" == "installed" ]]; then badge="$B_ON"; else badge="$B_OFF"; fi
+    used=""; [[ "${count:-0}" =~ ^[0-9]+$ ]] && (( count > 0 )) && used="${count}×"
+    # Rangli satrlarni `%-Ns` to'g'ri tekislamaydi (ANSI baytlari ham sanaladi) —
+    # to'ldirishni ui_pad_v qiladi, u ko'rinadigan uzunlikni hisoblaydi.
+    ui_pad_v cname  "${UI_TEXT}${name}${UI_R}" 20
+    ui_pad_v cbadge "$badge" 14
+    ui_pad_v ccat   "${UI_MUTED}${category}${UI_R}" 10
+    ui_trunc_v cdesc "$desc" "$dw"
+    printf '  %s %s %s %s %s%5s%s   %s%s%s\n' \
+      "$cname" "$cbadge" "$ccat" "${AUTH_ICO[$authclass]:-}" \
+      "$UI_FAINT" "$used" "$UI_R" \
+      "$UI_MUTED" "$cdesc" "$UI_R"
   done < <(
     build_rows "$config" | awk -F'\t' -v sf="$statsfile" '
       BEGIN { while ((getline line < sf) > 0) { m = split(line, a, "\t"); if (m >= 2) cnt[a[2]] = a[1] } }
       { c = cnt[$1] + 0; printf "%010d\t%06d\t%s\t%d\n", c, (++idx), $0, c }
     ' | sort -t"$(printf '\t')" -k1,1nr -k2,2n | cut -f3- | tr '\t' '\037'
   )
+  printf '  %s\n' "$(ui_rule $(( w - 4 )))"
+  # Legenda — auth ikonkalari nimani anglatishini bir qatorda tushuntiradi.
+  ui_footer "$(auth_icon free)=$(auth_label free)" \
+            "$(auth_icon browser)=$(auth_label browser)" \
+            "$(auth_icon key)=$(auth_label key)" \
+            "$(auth_icon paid)=$(auth_label paid)"
+  printf '  %s%s%s\n\n' "$UI_FAINT" "$(t 'konfiguratsiya: %s' "$config")" "$UI_R"
+}
+
+# --- Tafsilot paneli (o'ng ustun) — YAGONA manba --------------------------
+# detail_lines <...> — tanlangan agent tafsilotini global DETAIL[] massiviga
+# yozadi. HAM fzf preview, HAM ichki ikki-ustunli menyu shundan chizadi —
+# shuning uchun ikkala interfeys bir xil ko'rinadi. Ilgari ular ikki alohida
+# maket edi (awk'da va bash'da), va vaqt o'tib bir-biridan uzoqlashgandi.
+#
+# Sof bash, fork YO'Q: bu funksiya klavish tsiklida har siljishda chaqiriladi.
+#   detail_lines <name> <desc> <binary> <cmd> <install> <cat> <status>
+#                <auth> <url> <authclass> <provider> <eni>
+declare -ga DETAIL=()
+# DETAIL_SEC — oxirgi BO'LIM SARLAVHASI ("o'rnatish") indeksi, yo'q bo'lsa -1.
+# Panel balandligi yetmay tanasi kesilib qolsa, sarlavhani ham olib tashlash
+# uchun kerak (qarang detail_clip) — yolg'iz sarlavha ma'nosiz ko'rinadi.
+DETAIL_SEC=-1
+
+# --- Statik matnlarni BIR MARTA tayyorlash --------------------------------
+# `t()` va `auth_icon` chaqiruvlari `$(...)` ichida fork qiladi. detail_lines
+# klavish tsiklida ishlagani uchun ular OLDINDAN hisoblanadi va shu global
+# jadvallarda saqlanadi. detail_init() menyu ochilishidan oldin bir marta
+# chaqiriladi (idempotent).
+declare -gA AUTH_ICO=() AUTH_LBL=()   # `-g` — qarang lib/i18n.sh dagi izoh
+DL_L_CMD="" DL_L_CAT="" DL_L_PROV="" DL_L_LOGIN="" DL_L_URL=""
+DL_L_INSTALL="" DL_BADGE_ON="" DL_BADGE_OFF="" DL_READY=""
+detail_init() {
+  [[ -z "$DL_READY" ]] || return 0
+  local c
+  for c in free browser key paid none; do
+    AUTH_ICO[$c]="$(auth_icon "$c")"
+    AUTH_LBL[$c]="$(auth_label "$c")"
+  done
+  DL_L_CMD="$(t 'buyruq')"
+  DL_L_CAT="$(t 'guruh')"
+  DL_L_PROV="$(t 'provayder')"
+  DL_L_LOGIN="$(t 'login')"
+  DL_L_URL="$(t 'havola')"
+  DL_L_INSTALL="$(t "o'rnatish")"
+  DL_BADGE_ON="$(ui_badge ok "$(t "o'rnatilgan")")"
+  DL_BADGE_OFF="${UI_FAINT}${ICO[dot_off]} $(t "o'rnatilmagan")${UI_R}"
+  DL_READY=1
+}
+
+# detail_lines — DETAIL[] ni to'ldiradi. SOF BASH: birorta ham `$(...)` yo'q
+# (qarang detail_init va lib/ui.sh dagi `_v` variantlar).
+detail_lines() {
+  local name="$1" desc="$2" binary="$3" cmd="$4" install="$5" cat="$6"
+  local status="$7" auth="$8" url="$9" authclass="${10}" provider="${11}" w="${12:-46}"
+  detail_init
+  DETAIL=()
+  DETAIL_SEC=-1
+  local iw=$(( w - 2 )); (( iw < 12 )) && iw=12
+  local badge tmp kv
+
+  if [[ "$status" == "installed" ]]; then badge="$DL_BADGE_ON"
+  else                                    badge="$DL_BADGE_OFF"; fi
+
+  ui_trunc_v tmp "$name" $(( iw - 15 ))
+  DETAIL+=("${UI_B}${UI_TEXT}${tmp}${UI_R}  ${badge}")
+  DETAIL+=("")
+
+  if [[ -n "$desc" ]]; then
+    ui_trunc_v tmp "$desc" "$iw"
+    DETAIL+=("${UI_MUTED}${tmp}${UI_R}")
+    DETAIL+=("")
+  fi
+
+  ui_trunc_v tmp "$cmd" $(( iw - 11 ))
+  ui_kv_v kv "$DL_L_CMD" "${UI_AI}${tmp}${UI_R}"; DETAIL+=("$kv")
+  ui_trunc_v tmp "$cat" $(( iw - 11 ))
+  ui_kv_v kv "$DL_L_CAT" "${UI_TEXT}${tmp}${UI_R}"; DETAIL+=("$kv")
+  ui_trunc_v tmp "$provider" $(( iw - 11 ))
+  ui_kv_v kv "$DL_L_PROV" "${UI_TEXT}${tmp}${UI_R}"; DETAIL+=("$kv")
+  ui_trunc_v tmp "${AUTH_LBL[$authclass]:-—}" $(( iw - 13 ))
+  ui_kv_v kv "$DL_L_LOGIN" "${AUTH_ICO[$authclass]:-} ${UI_TEXT}${tmp}${UI_R}"; DETAIL+=("$kv")
+  if [[ -n "$url" ]]; then
+    ui_trunc_v tmp "$url" $(( iw - 11 ))
+    ui_kv_v kv "$DL_L_URL" "${UI_INFO}${tmp}${UI_R}"; DETAIL+=("$kv")
+  fi
+
+  DETAIL+=("")
+  if [[ -n "$install" ]]; then
+    DETAIL_SEC=${#DETAIL[@]}                # sarlavha indeksi (tanasi — keyingi)
+    DETAIL+=("${UI_MUTED}${DL_L_INSTALL}${UI_R}")
+    ui_trunc_v tmp "$install" "$iw"
+    DETAIL+=("${UI_FAINT}${tmp}${UI_R}")
+  fi
+}
+
+# detail_clip <ko'rinadigan-qatorlar-soni> — panel kesilganda OXIRIDA yolg'iz
+# qolgan bo'lim sarlavhasini o'chiradi. Past terminalda "o'rnatish" sarlavhasi
+# ko'rinib, buyrug'ining o'zi kesilib qolardi — foydalanuvchi bo'sh sarlavha
+# ko'rardi. Sof bash, fork yo'q (klavish tsiklida chaqiriladi).
+detail_clip() {
+  local cap="$1"
+  (( DETAIL_SEC >= 0 )) || return 0
+  [[ -n "${DETAIL[DETAIL_SEC]+x}" ]] || return 0
+  # Sarlavha ko'rinadi (cap > h), tanasi esa yo'q (cap <= h+1) → aynan cap == h+1.
+  (( cap == DETAIL_SEC + 1 )) || return 0
+  DETAIL[DETAIL_SEC]=""
 }
 
 # --- Preview (fzf tomonidan qism-jarayon sifatida chaqiriladi) -------------
-# fzf preview'ni TTY'siz ishga tushiradi, shuning uchun ranglarni bevosita
-# ANSI kodlari bilan beramiz (fzf --ansi ularni to'g'ri ko'rsatadi).
+# fzf preview'ni TTY'siz ishga tushiradi — ranglar to'g'ridan-to'g'ri ANSI
+# bo'lib chiqadi (fzf --ansi ularni ko'rsatadi). Chiqish STDOUT'ga.
 preview_agent() {
-  local name="$1" datafile="$2"
+  local name="$1" datafile="$2" width="${3:-52}"
   [[ -r "$datafile" ]] || return 0
-  awk -F'\t' -v n="$name" \
-    -v l_inst="$(t 'o'\''rnatilgan')" -v l_noinst="$(t 'o'\''rnatilmagan')" \
-    -v l_status="$(t 'Holat')" -v l_binary="$(t 'Binar')" -v l_cmd="$(t 'Buyruq')" \
-    -v l_cat="$(t 'Kategoriya')" -v l_login="$(t 'Login')" -v l_url="$(t 'Havola')" \
-    -v l_install="$(t 'O'\''rnatish:')" -v l_unset="$(t '(belgilanmagan)')" '
-    BEGIN {
-      ESC = sprintf("%c", 27)
-      B   = ESC "[1m";      R = ESC "[0m"
-      CY  = ESC "[38;5;87m"; GY = ESC "[90m"
-      GRN = ESC "[32m";      RED = ESC "[31m";  MG = ESC "[38;5;213m"
-    }
-    $1 == n {
-      # Holat belgisi
-      if ($7 ~ /✓/) { badge = GRN "● " l_inst R }
-      else          { badge = RED "○ " l_noinst R }
-
-      print ""
-      print "  " B CY $1 R
-      print "  " GY "────────────────────────────" R
-      print ""
-      print "  " GY sprintf("%-10s", l_status) R badge
-      print "  " GY sprintf("%-10s", l_binary) R $3
-      print "  " GY sprintf("%-10s", l_cmd)    R MG $4 R
-      print "  " GY sprintf("%-10s", l_cat)    R $6
-      print "  " GY sprintf("%-10s", l_login)  R ($8 == "" ? GY "—" R : $8)
-      if ($9 != "") print "  " GY sprintf("%-10s", l_url) R CY $9 R
-      print ""
-      print "  " GY l_install R
-      print "    " ($5 == "" ? GY l_unset R : $5)
-      print ""
-      print "  " GY "────────────────────────────" R
-      print "  " $2
-      exit
-    }' "$datafile"
+  local n d b c ins cat st a u ac pr L
+  while IFS=$'\037' read -r n d b c ins cat st a u ac pr; do
+    [[ "$n" == "$name" ]] || continue
+    detail_lines "$n" "$d" "$b" "$c" "$ins" "$cat" "$st" "$a" "$u" "$ac" "$pr" "$width"
+    printf '\n'
+    for L in "${DETAIL[@]}"; do printf ' %s\n' "$L"; done
+    return 0
+  done < <(tr '\t' '\037' <"$datafile")
 }
 
 # --- Menyu qatorlarini qurish (eng ko'p ishlatilgan yuqorida) --------------
@@ -979,14 +1353,28 @@ build_menu() {
   local rows="$1" statsfile="${2:-}" globalfile="${3:-}" lastname="${4:-}"
   [[ -n "$statsfile" && -r "$statsfile" ]] || statsfile=/dev/null
   [[ -n "$globalfile" && -r "$globalfile" ]] || globalfile=/dev/null
+  local w; w="$(ui_width)"
+  # Izoh ustuni terminal eniga moslashadi (nom 18 + holat/meta ~30 zaxira).
+  local descw=$(( w - 52 )); (( descw < 14 )) && descw=14
+  # Tor terminalda 14 lik "pol" enidan oshib ketardi. Ustma-ust (stacked)
+  # maketda qator = 4 (otstup) + 1 (ikonka) + 2 + 18 (nom) + 1 + descw + meta,
+  # ya'ni descw eng ko'pi bilan w-32 bo'la oladi (meta uchun 6 zaxira).
+  local descmax=$(( w - 32 )); (( descw > descmax )) && descw=$descmax
+  (( descw < 6 )) && descw=6
+  local ell='…'; [[ "${UI_ICON_TIER:-unicode}" == "ascii" ]] && ell='..'
   awk -F'\t' -v sf="$statsfile" -v gf="$globalfile" -v tops=" $TOP_AGENTS " \
-            -v last="$lastname" -v l_last="$(t 'oxirgi')" \
-            -v g="${C_GREEN:-}" -v r="${C_RED:-}" -v z="${C_RESET:-}" \
-            -v t="${C_TITLE:-}" -v gy="${C_GRAY:-}" -v b="${C_BOLD:-}" -v mg="${C_MAGENTA:-}" '
-    function human(x) {
-      if (x >= 1000000) return sprintf("%.1fM", x / 1000000)
-      if (x >= 1000)    return sprintf("%.1fk", x / 1000)
-      return x ""
+            -v last="$lastname" -v descw="$descw" -v ell="$ell" \
+            -v i_on="${ICO[dot_on]}" -v i_off="${ICO[dot_off]}" \
+            -v i_last="${ICO[last]}" \
+            -v c_ok="${UI_OK:-}" -v c_faint="${UI_FAINT:-}" -v c_muted="${UI_MUTED:-}" \
+            -v c_text="${UI_TEXT:-}" -v c_ai="${UI_AI:-}" \
+            -v z="${UI_R:-}" -v b="${UI_B:-}" '
+    # DIQQAT: ellipsis ascii pogonada IKKI belgi (".."), unicode da bitta.
+    # Ilgari bu yerda n-1 yozilgan edi va ascii pogonada natija bir belgi
+    # UZUNROQ chiqib, tor terminalda qator enidan oshib ketardi.
+    function clip(s, n,   el) {
+      el = length(ell)
+      return (length(s) > n) ? substr(s, 1, n - el) ell : s
     }
     BEGIN {
       # Lokal statistika: nom -> son.
@@ -1001,21 +1389,28 @@ build_menu() {
       }
     }
     {
-      name=$1; desc=$2; binary=$3; status=$7; auth=$8;
-      if (status ~ /✓/) { icon = g "✓" z } else { icon = r "✗" z }
-      badge = "";
-      if (index(auth, "🆓"))      badge = "🆓";
-      else if (index(auth, "🌐")) badge = "🌐";
-      else if (index(auth, "🔑")) badge = "🔑";
-      else if (index(auth, "💳")) badge = "💳";
-      c = cnt[name] + 0;
-      istop = (index(tops, " " binary " ") > 0) ? 1 : 0;
+      name=$1; desc=$2; binary=$3; status=$7;
+      icon = (status == "installed") ? c_ok i_on z : c_faint i_off z;
+      c      = cnt[name] + 0;
+      istop  = (index(tops, " " binary " ") > 0) ? 1 : 0;
       islast = (last != "" && name == last) ? 1 : 0;
-      use = (c > 0) ? sprintf("  %s·%d×%s", gy, c, z) : "";
-      gbadge = (name in grank) ? sprintf("  %s🔥#%d·%s%s", mg, grank[name], human(gcnt[name] + 0), z) : "";
-      star = istop ? sprintf("  %s⭐%s", t, z) : "";
-      lastm = islast ? sprintf("  %s↩ %s%s", mg, l_last, z) : "";
-      disp = sprintf("%s  %s%s%-16s%s %s%s%s  %s%s%s%s%s", icon, b, t, name, z, gy, desc, z, badge, use, gbadge, star, lastm)
+
+      # META ZONASI — eng so`nik, o`ngda. Ilgari bu yerda 5 tagacha emoji
+      # bo`lardi (auth badge + yulduz + olov + rank + sanoq + "oxirgi" matni).
+      # Endi: "oxirgi" VA "top" o`zaro istisno (bittasi yetarli), auth belgisi
+      # esa umuman olib tashlandi — u o`ng ustunda batafsil ko`rinadi.
+      # DIQQAT: bu awk dasturi bash `\x27...\x27` bloki ichida — izohlarda
+      # APOSTROF ISHLATMANG, u blokni uzib yuboradi (build_menu jim buziladi).
+      # "Top" yulduzchasi ataylab yoq: qatorlar allaqachon mashhurlik boyicha
+      # saralangan (istop saralash kalitida qatnashadi), yani belgi osha
+      # manoni takrorlab, royxatning yarmida shovqin hosil qilardi.
+      meta = "";
+      if (islast)        meta = meta " " c_ai i_last z;
+      if (c > 0)         meta = meta sprintf(" %s%d×%s", c_faint, c, z);
+      if (name in grank) meta = meta sprintf(" %s#%d%s", c_faint, grank[name], z);
+
+      disp = sprintf("%s  %s%s%-18s%s %s%s%s%s",
+                     icon, b, c_text, name, z, c_muted, clip(desc, descw), z, meta);
       # Tartiblash kalitlari: 1) oxirgi ishlatilgan (eng tepada), 2) lokal sanoq
       # (kamayish), 3) top/mashhurlik (kamayish — yangi foydalanuvchida ham
       # mashhurlar tepada), 4) config indeksi (barqaror).
@@ -1027,24 +1422,26 @@ build_menu() {
 # --- fzf orqali tanlash ---------------------------------------------------
 select_with_fzf() {
   local menu="$1" datafile="$2" selection rc
+  # Ranglar ichki menyu bilan BIR XIL semantik palitradan (lib/ui.sh):
+  # siyoh = brend/AI, kulrang = ikkilamchi, so'nik = ramka. Ilgari bu yerda
+  # feruza/pushti gradient bor edi va ichki menyudan butunlay boshqacha
+  # ko'rinardi — bitta mahsulot ikki xil tuyulardi.
   local -a fzf_args=(
     --ansi
     --delimiter='\t'
     --with-nth=1
-    --prompt="$(t '  qidirish › ')"
-    --pointer='▶'
-    --marker='✓'
-    --height=~90%
+    --prompt="$(printf '%s ' "${ICO[search]}")"
+    --pointer="${ICO[arrow]}"
+    --marker="${ICO[ok]}"
+    --height=~92%
     --layout=reverse
-    --border=rounded
-    --border-label=' ✦ Aidevix CLI '
-    --border-label-pos=3
     --margin='1,2'
-    --padding=1
     --info=inline
-    --color='fg:-1,bg:-1,hl:51,fg+:231,bg+:236,hl+:87,info:245,prompt:213,pointer:213,marker:84,header:245,border:60,label:87'
-    --header="$(t '↑/↓ tanlang · yozib qidiring · ENTER ishga tushirish · ESC bekor')"
+    --color='fg:-1,bg:-1,hl:141,fg+:252,bg+:236,hl+:141,info:240,prompt:141,pointer:141,marker:114,header:245,border:240'
+    --header="$(printf '%s Aidevix\n%s' "${ICO[brand]}" "$(ui_rule 46)")"
   )
+  # Eski fzf `--border=<qiymat>` ni tanimasligi mumkin — flag umuman
+  # berilmasa standart holat (ramkasiz) ishlaydi, ya'ni zaxira yo'l kerak emas.
 
   # Preview har siljishda `bash` qism-jarayonini ochadi. Windows (Git Bash /
   # MSYS / Cygwin)da bu ko'pincha cygwin fork (child_copy / cygheap) xatolarini
@@ -1057,10 +1454,12 @@ select_with_fzf() {
   [[ -n "${AIDEVIX_FZF_PREVIEW:-}" ]] && want_preview=1
   [[ -n "${AIDEVIX_NO_PREVIEW:-}" ]]  && want_preview=0
   if [[ "$want_preview" -eq 1 ]]; then
+    # Preview eni ichki menyudagi o'ng ustun bilan bir xil nisbatda (58/42),
+    # ajratgichi ham bir xil — ikkala interfeys bitta maketga bo'ysunadi.
+    local pw=$(( $(ui_width) * 58 / 100 - 6 )); (( pw < 30 )) && pw=30
     fzf_args+=(
-      --preview "bash \"$SELF\" __preview {2} \"$datafile\""
-      --preview-window='right,52%,wrap,border-left'
-      --preview-label=' tafsilot '
+      --preview "bash \"$SELF\" __preview {2} \"$datafile\" $pw"
+      --preview-window='right,58%,wrap,border-left'
     )
   fi
 
@@ -1093,14 +1492,15 @@ select_with_numbers() {
   [[ "${#names[@]}" -gt 0 ]] || die 1 "$(t 'Menyu uchun agent topilmadi.')"
 
   log_warn "$(t "fzf topilmadi — oddiy menyu ishlatilmoqda (yaxshiroq tajriba uchun fzf o'rnating).")"
-  printf '\n%s%s%s\n' "${C_BOLD:-}" "$(t 'AI CLI tanlang:')" "${C_RESET:-}" >&2
+  local w; w="$(ui_width)"
+  ui_header "${UI_MUTED}$(t 'agent tanlang')${UI_R}"
   local i
   for i in "${!names[@]}"; do
-    printf '%b%3d)%b %b\n' "${C_BLUE:-}" "$((i + 1))" "${C_RESET:-}" "${displays[$i]}" >&2
+    printf '  %s%3d%s  %b\n' "${UI_FAINT}" "$((i + 1))" "${UI_R}" "${displays[$i]}" >&2
   done
-  printf '%s\n' "----------------------------------------" >&2
+  printf '  %s\n' "$(ui_rule $(( w - 4 )))" >&2
 
-  local choice="" prompt; prompt="$(t 'Raqam kiriting (1-%s, ESC=bekor) › ' "${#names[@]}")"
+  local choice="" prompt; prompt="  $(t 'Raqam kiriting (1-%s, ESC=bekor)' "${#names[@]}") ${ICO[arrow]} "
   trap - ERR
   if { : >/dev/tty; } 2>/dev/null; then
     printf '%s' "$prompt" >/dev/tty
@@ -1139,7 +1539,10 @@ select_with_arrows() {
   [[ "$total" -gt 0 ]] || die 1 "$(t 'Menyu uchun agent topilmadi.')"
 
   # Interaktiv TTY shart (chaqiruvchi tekshirgan; bu — himoya uchun ikkilamchi).
-  { : >/dev/tty; } 2>/dev/null || return 2  # faqat poyga holatida; trap'ni tripmaslik uchun shartli kontekstda emas — gate run_menu'da
+  # UI_DUMP rejimida TTY kerak emas: bitta kadr stdout'ga chiziladi (test seam).
+  if [[ -z "${AIDEVIX_UI_DUMP:-}" ]]; then
+    { : >/dev/tty; } 2>/dev/null || return 2  # gate run_menu'da; bu ikkilamchi himoya
+  fi
 
   # Klavisha o'qish `dd`ga tayanadi (qarang _rd). Yo'q bo'lsa JIM o'lmaymiz:
   # rc=2 bilan qaytamiz → run_menu raqamli menyuga tushadi va sababini aytadi.
@@ -1150,20 +1553,22 @@ select_with_arrows() {
   # avvalgi per-keypress awk/subshell'lar bitta strelka bosishini soniyagacha
   # cho'zib, "menyuda scroll ishlamayapti" shikoyatiga sabab bo'lardi.
   # TAB → \037 (US) — bo'sh maydonlar "yutilmasligi" uchun (qarang build_rows).
-  local -a r_name=() r_desc=() r_cmd=() r_inst=() r_cat=() r_st=() r_auth=() r_url=()
-  local rn rd rb rc2 ri rcat rst ra ru
-  while IFS=$'\037' read -r rn rd rb rc2 ri rcat rst ra ru; do
+  local -a r_name=() r_desc=() r_bin=() r_cmd=() r_inst=() r_cat=() r_st=()
+  local -a r_auth=() r_url=() r_ac=() r_prov=()
+  local rn rd rb rc2 ri rcat rst ra ru rac rpr
+  while IFS=$'\037' read -r rn rd rb rc2 ri rcat rst ra ru rac rpr; do
     [[ -n "$rn" ]] || continue
-    r_name+=("$rn"); r_desc+=("$rd"); r_cmd+=("$rc2"); r_inst+=("$ri")
-    r_cat+=("$rcat"); r_st+=("$rst"); r_auth+=("$ra"); r_url+=("$ru")
+    r_name+=("$rn"); r_desc+=("$rd"); r_bin+=("$rb"); r_cmd+=("$rc2")
+    r_inst+=("$ri"); r_cat+=("$rcat"); r_st+=("$rst"); r_auth+=("$ra")
+    r_url+=("$ru");  r_ac+=("$rac");   r_prov+=("$rpr")
   done < <(tr '\t' '\037' <"$datafile")
 
   # QIDIRUV matnlari (kichik harf) — bitta tr bilan butun faylni kichraytirib
   # o'qiymiz (bash 3.2 da ${var,,} yo'q). Tartib r_* massivlari bilan bir xil.
   local -a r_hay=()
-  while IFS=$'\037' read -r rn rd rb rc2 ri rcat rst ra ru; do
+  while IFS=$'\037' read -r rn rd rb rc2 ri rcat rst ra ru rac rpr; do
     [[ -n "$rn" ]] || continue
-    r_hay+=("$rn $rd $rb $rcat $ra")
+    r_hay+=("$rn $rd $rb $rcat $ra $rpr")
   done < <(tr '\t' '\037' <"$datafile" | tr '[:upper:]' '[:lower:]')
 
   # Menyu indeksi → datafile qatori indeksi (nom bo'yicha; sof bash, forksiz).
@@ -1177,37 +1582,129 @@ select_with_arrows() {
     if (( rowof[i] >= 0 )); then hay[i]="${r_hay[${rowof[i]}]}"; else hay[i]=""; fi
   done
 
-  # Ko'rinadigan qatorlar soni — terminal balandligiga moslab cheklaymiz.
-  local th; th="$(tput lines 2>/dev/null || echo 24)"; [[ "$th" =~ ^[0-9]+$ ]] || th=24
-  local page=$(( total < 10 ? total : 10 ))
-  local maxlist=$(( th - 14 )); (( maxlist < 3 )) && maxlist=3
-  (( page > maxlist )) && page=$maxlist
-  # Ramka balandligi o'zgarmas: header2 + page + count1 + hr1 + det6 + footer1.
-  # Alt-screen'da har chizish \033[H dan boshlanadi — balandlikni sanash shart emas,
-  # lekin det[] DOIM 6 qator bo'lishi kerak (aks holda eski qatorlar qoladi).
+  # ===================== MAKET (LAYOUT) HISOBI ============================
+  # Ikki ustunli maket: CHAPDA qidiriladigan agentlar ro'yxati, O'NGDA
+  # tanlangan agentning tafsiloti. Tor terminalda (< 84 ustun) avtomatik
+  # ustma-ust (stacked) maketga tushadi — ro'yxat tepada, tafsilot pastda.
+  local th tw
+  th="$(tput lines 2>/dev/null || echo 24)"; [[ "$th" =~ ^[0-9]+$ ]] || th=24
+  tw="$(ui_width)"
 
-  # Statik matn/yorliqlarni BIR MARTA hisoblaymiz — har $(t ...) command
-  # substitution ham fork; ularni klavish tsiklida takrorlash Windows'da
-  # menyuni sezilarli sekinlashtirardi.
-  local S_HDR S_PROMPT S_HR S_FOOT S_NOMATCH S_INST S_NOINST
-  local L_CMD L_CAT L_LOGIN L_URL L_INSTL L_UNSET
-  S_HDR="  ${C_BOLD}${C_TITLE}✦ Aidevix CLI${C_RESET}  ${C_GRAY}$(t '↑/↓ tanlang · yozib qidiring · ENTER ishga tushirish · ESC bekor')${C_RESET}"
-  S_PROMPT="$(t '  qidirish › ')"
-  S_HR="  ${C_GRAY}$(hr 30)${C_RESET}"
-  S_FOOT="  ${C_GRAY}$(t 'q yoki 2×ESC = bekor · Enter = tanlash')${C_RESET}"
-  S_NOMATCH="  ${C_GRAY}$(t 'Moslik topilmadi — Backspace bilan qidiruvni tahrirlang.')${C_RESET}"
-  S_INST="${C_GREEN}● $(t "o'rnatilgan")${C_RESET}"
-  S_NOINST="${C_RED}○ $(t "o'rnatilmagan")${C_RESET}"
-  L_CMD="$(t 'Buyruq')";  L_CAT="$(t 'Kategoriya')";     L_LOGIN="$(t 'Login')"
-  L_URL="$(t 'Havola')";  L_INSTL="$(t "O'rnatish:")";   L_UNSET="$(t '(belgilanmagan)')"
+  local two_col=0 lw=0 rw=0
+  if (( tw >= 84 )); then
+    two_col=1
+    lw=$(( tw * 42 / 100 ))
+    (( lw < 34 )) && lw=34
+    (( lw > 54 )) && lw=54
+    rw=$(( tw - lw - 7 ))          # chekkalar + ajratgich + bo'shliqlar
+  else
+    lw=$(( tw - 4 )); rw=$(( tw - 4 ))
+  fi
+
+  # Tana balandligi — sarlavha(1)+chiziq(1)+qidiruv(1)+bo'sh(1)+chiziq(1)
+  # +status(1)+footer(1) = 7 qator zaxira, +2 xavfsizlik.
+  local body=$(( th - 9 ))
+  (( body < 5 )) && body=5
+  (( body > 20 )) && body=20
+  local page=$body
+  if (( two_col == 0 )); then
+    page=$(( body - 8 )); (( page < 3 )) && page=3   # qolgani tafsilotga
+  fi
+  (( page > total )) && page=$total
+  (( page < 1 )) && page=1
+
+  # ================= STATIK MATNLARNI BIR MARTA TAYYORLASH =================
+  # Har `$(t ...)` — buyruq-almashtirish, ya'ni FORK. Klavish tsiklida ular
+  # takrorlansa MSYS/Windows'da menyu sezilarli sekinlashadi (har fork
+  # ~50-150 ms), shuning uchun hammasi shu yerda BIR MARTA hisoblanadi.
+  detail_init
+  local S_PROMPT S_NOMATCH S_SEP S_RULE S_FOOT S_STATUS=""
+  local S_KEY_SET S_KEY_UNSET S_DASH AGENT_COUNT S_VER S_LAT
+  S_PROMPT="$(t 'qidirish')"
+  S_NOMATCH="${UI_MUTED}$(t "Moslik yo'q — Backspace bilan qidiruvni tahrirlang.")${UI_R}"
+  S_SEP="${UI_FAINT}${ICO[sep]}${UI_R}"
+  S_RULE="$(ui_rule $(( tw - 4 )))"
+  S_KEY_SET="$(t 'kalit bor')"
+  S_KEY_UNSET="$(t 'kalit yo'\''q')"
+  S_DASH='—'; [[ "${UI_ICON_TIER:-unicode}" == "ascii" ]] && S_DASH='-'
+  # Strelkalar ham POG'ONADAN olinadi: ascii terminalda '↑↓' o'rniga '^v'
+  # chiqadi (ilgari bu yerda literal unicode turardi va ascii pog'onasida
+  # buzuq belgi bo'lib ko'rinardi).
+  ui_footer_str_v S_FOOT "${ICO[updown]}=$(t 'harakat')" "${ICO[enter]}=$(t 'ishga tushirish')" \
+                         "a-z=$(t 'qidirish')" "esc=$(t 'chiqish')"
+
+  # Status bar uchun statik maydonlar (tanlovga bog'liq emas).
+  local _ins=0 _tot=0 _k
+  for _k in "${!r_st[@]}"; do
+    _tot=$(( _tot + 1 ))
+    [[ "${r_st[_k]}" == "installed" ]] && _ins=$(( _ins + 1 ))
+  done
+  AGENT_COUNT="$(t '%s/%s o'\''rnatilgan' "$_ins" "$_tot")"
+  S_VER="$(status_version_field)"
+  S_LAT="$(status_latency_field)"
+
+  # Provayder → muhit o'zgaruvchisi jadvallari. `$(provider_model_var ...)`
+  # klavish tsiklida fork bo'lardi — shuning uchun oldindan jadvalga olamiz.
+  local -A PROV_MV=() PROV_KV=()
+  local _p
+  for _k in "${!r_prov[@]}"; do
+    _p="${r_prov[_k]}"
+    [[ -n "$_p" && -z "${PROV_MV[$_p]+x}" ]] || continue
+    PROV_MV[$_p]="$(provider_model_var "$_p")"
+    PROV_KV[$_p]="$(provider_key_var "$_p")"
+  done
+
+  # ================= CHAP USTUN QATORLARINI OLDINDAN QURISH ================
+  # build_menu bergan qatorlar TO'LIQ enga mo'ljallangan (izoh bilan) — izoh
+  # endi O'NG ustunda ko'rinadi. Shuning uchun chap ustun uchun IXCHAM
+  # qatorlarni shu yerda quramiz: holat + nom + meta. Hammasi BIR MARTA.
+  local -a lrow=()
+  if (( two_col )); then
+    local -A ucnt=()
+    local _c _n
+    if [[ -r "$STATS_FILE" ]]; then
+      while IFS=$'\t' read -r _c _n; do
+        [[ -n "$_n" ]] && ucnt["$_n"]="$_c"
+      done <"$STATS_FILE"
+    fi
+    local lastn; lastn="$(read_last)"
+    local nw=$(( lw - 12 )); (( nw < 10 )) && nw=10
+    local ii jj ic meta nm cnt2 nmp
+    for ii in "${!names[@]}"; do
+      jj="${rowof[ii]:--1}"
+      nm="${names[ii]}"
+      if (( jj >= 0 )) && [[ "${r_st[jj]}" == "installed" ]]; then
+        ic="${UI_OK}${ICO[dot_on]}${UI_R}"
+      else
+        ic="${UI_FAINT}${ICO[dot_off]}${UI_R}"
+      fi
+      # Meta zonasi — FAQAT foydalanuvchiga xos ma'lumot: "oxirgi ishlatilgan"
+      # va ishlatish sanog'i. "Top/mashhur" yulduzchasi ATAYLAB yo'q: ro'yxat
+      # allaqachon mashhurlik bo'yicha saralangan, ya'ni yulduz o'sha ma'noni
+      # TAKRORLAydi — va ro'yxatning yarmida turib shovqin hosil qilardi.
+      meta=""
+      if [[ -n "$lastn" && "$nm" == "$lastn" ]]; then
+        meta="${UI_AI}${ICO[last]}${UI_R}"
+      fi
+      cnt2="${ucnt[$nm]:-0}"
+      [[ "$cnt2" =~ ^[0-9]+$ ]] || cnt2=0
+      (( cnt2 > 0 )) && meta="${meta} ${UI_FAINT}${cnt2}×${UI_R}"
+      ui_trunc_v nmp "$nm" "$nw"
+      ui_pad_v nmp "${UI_TEXT}${nmp}${UI_R}" "$nw"
+      ui_pad_v meta "$meta" 7
+      lrow[ii]="${ic} ${nmp} ${meta}"
+    done
+  fi
 
   local cur=0 topv=0 query=""
   local -a vis=()
 
   # _af — joriy filtrga mos indekslar ro'yxatini (vis) quradi.
+  # Kichik harfga o'tkazish SOF BASH (${q,,}) — ilgari `printf | tr` edi,
+  # ya'ni har bosilgan harfda IKKI fork.
   _af() {
     vis=(); local q ii
-    q="$(printf '%s' "$query" | tr '[:upper:]' '[:lower:]')"
+    q="${query,,}"
     for ii in "${!names[@]}"; do
       if [[ -z "$q" ]]; then vis+=("$ii"); continue; fi
       case "${hay[ii]}" in *"$q"*) vis+=("$ii") ;; esac
@@ -1216,65 +1713,141 @@ select_with_arrows() {
     (( cur < 0 )) && cur=0
   }
 
-  # _ad <menyu-indeksi> — tanlangan agentning qat'iy DET-qatorli tafsilotini
-  # det[] ga yozadi. Sof bash (oldindan o'qilgan r_* massivlaridan) — har
-  # siljishda awk/subshell ochilmaydi (Windows'da scroll sekinligining sababi edi).
-  local -a det=()
+  # _ad <menyu-indeksi> — tanlangan agent tafsilotini DETAIL[] ga yozadi.
+  # Umumiy detail_lines() orqali — fzf preview ham AYNAN shundan chizadi,
+  # shuning uchun ikkala interfeys bir xil ko'rinadi.
   _ad() {
-    det=(); local mi="${1:--1}" dj=-1 n2="" d2="" c2="" ins="" cat="" st="" a="" u="" badge
+    local mi="${1:--1}" dj=-1
     if [[ "$mi" =~ ^[0-9]+$ ]]; then dj="${rowof[mi]:--1}"; fi
-    if (( dj >= 0 )); then
-      n2="${r_name[dj]}"; d2="${r_desc[dj]}"; c2="${r_cmd[dj]}"; ins="${r_inst[dj]}"
-      cat="${r_cat[dj]}"; st="${r_st[dj]}"; a="${r_auth[dj]}"; u="${r_url[dj]}"
-    fi
-    if [[ "$st" == *✓* ]]; then badge="$S_INST"; else badge="$S_NOINST"; fi
-    [[ -z "$a" ]] && a="—"; [[ -z "$u" ]] && u="—"; [[ -z "$ins" ]] && ins="$L_UNSET"
-    det+=("  ${C_BOLD}${C_TITLE}${n2}${C_RESET}   ${badge}")
-    det+=("  ${C_GRAY}${L_CMD}${C_RESET}     ${C_MAGENTA}${c2}${C_RESET}")
-    det+=("  ${C_GRAY}${L_CAT}${C_RESET} ${cat}    ${C_GRAY}${L_LOGIN}${C_RESET} ${a}")
-    det+=("  ${C_GRAY}${L_URL}${C_RESET}     ${C_CYAN}${u}${C_RESET}")
-    det+=("  ${C_GRAY}${L_INSTL}${C_RESET} ${ins}")
-    det+=("  ${C_GRAY}${d2}${C_RESET}")
+    if (( dj < 0 )); then DETAIL=(); DETAIL_SEC=-1; return 0; fi
+    detail_lines "${r_name[dj]}" "${r_desc[dj]}" "${r_bin[dj]}" "${r_cmd[dj]}" \
+                 "${r_inst[dj]}" "${r_cat[dj]}" "${r_st[dj]}" "${r_auth[dj]}" \
+                 "${r_url[dj]}" "${r_ac[dj]}" "${r_prov[dj]}" "$rw"
   }
 
-  # _ar — butun ramkani (qat'iy FH qator) chizadi. Sof bash: forksiz (statik
-  # matnlar oldindan tayyor). Alt-screen'da har safar tepadan (\033[H) chiziladi.
+  # _as <menyu-indeksi> — status bar satrini S_STATUS ga yozadi.
+  # FAQAT haqiqiy ma'lumot: provayder agent konfiguratsiyasidan, model va
+  # kalit holati MUHITDAN o'qiladi (Aidevix modelni o'zi tanlamaydi va
+  # API'ga murojaat qilmaydi — o'zi o'lchay oladigan narsa yo'q), agentlar
+  # sanog'i ro'yxatdan, versiya/yangilanish va latency keshlangan o'lchovdan.
+  _as() {
+    local mi="${1:--1}" dj=-1 prov="" mv="" kv="" model=""
+    local f_prov="" f_model="" f_key=""
+    if [[ "$mi" =~ ^[0-9]+$ ]]; then dj="${rowof[mi]:--1}"; fi
+    (( dj >= 0 )) && prov="${r_prov[dj]}"
+
+    if [[ -n "$prov" ]]; then
+      f_prov="${UI_AI}${ICO[ai]} ${prov}${UI_R}"
+      mv="${PROV_MV[$prov]:-}"
+      [[ -n "$mv" ]] && model="${!mv:-}"
+      if [[ -n "$model" ]]; then f_model="${UI_TEXT}${model}${UI_R}"
+      else                       f_model="${UI_FAINT}${S_DASH}${UI_R}"; fi
+      kv="${PROV_KV[$prov]:-}"
+      if [[ -n "$kv" ]]; then
+        if [[ -n "${!kv:-}" ]]; then f_key="${UI_OK}${ICO[dot_on]} ${S_KEY_SET}${UI_R}"
+        else                         f_key="${UI_FAINT}${ICO[dot_off]} ${S_KEY_UNSET}${UI_R}"; fi
+      fi
+    fi
+    ui_statusbar_str_v S_STATUS "$f_prov" "$f_model" "$f_key" \
+      "${UI_MUTED}${AGENT_COUNT}${UI_R}" "$S_VER" "$S_LAT"
+  }
+
+  # _ar — butun ramkani chizadi. Alt-screen'da har safar tepadan (\033[H).
+  # SOF BASH: statik matnlar tayyor, chap ustun qatorlari oldindan qurilgan,
+  # tsikl ichida birorta ham `$(...)` YO'Q.
   _ar() {
     local nvis=${#vis[@]}
     (( cur < topv )) && topv=$cur
     (( cur >= topv + page )) && topv=$(( cur - page + 1 ))
     (( topv < 0 )) && topv=0
     local -a out=()
-    out+=("$S_HDR")
-    if [[ -n "$query" ]]; then out+=("  ${C_MAGENTA}${S_PROMPT}${C_RESET}${query}")
-    else                       out+=("  ${C_GRAY}${S_PROMPT}${C_RESET}"); fi
-    local r vi oi
-    for (( r=0; r<page; r++ )); do
-      vi=$(( topv + r ))
-      if (( vi < nvis )); then
-        oi=${vis[vi]}
-        if (( vi == cur )); then out+=("  ${C_TITLE}▶${C_RESET} ${displays[oi]}")
-        else                     out+=("    ${displays[oi]}"); fi
-      else
-        out+=("")
-      fi
-    done
-    if (( nvis > 0 )); then out+=("  ${C_GRAY}$((cur+1))/${nvis}${C_RESET}")
-    else                    out+=("  ${C_GRAY}0/${total}${C_RESET}"); fi
-    out+=("$S_HR")
-    if (( nvis > 0 )); then
-      _ad "${vis[cur]}"
+
+    # --- Sarlavha + qidiruv qatori ---
+    out+=("  ${UI_BRAND}${UI_B}${ICO[brand]} Aidevix${UI_R}")
+    out+=("  ${S_RULE}")
+    local qline
+    if [[ -n "$query" ]]; then
+      qline="  ${UI_BRAND}${ICO[search]}${UI_R} ${UI_TEXT}${query}${UI_R}${UI_BRAND}_${UI_R}"
     else
-      det=("$S_NOMATCH" "" "" "" "" "")
+      qline="  ${UI_FAINT}${ICO[search]} ${S_PROMPT}${UI_R}"
     fi
-    local dl
-    for dl in "${det[@]}"; do out+=("$dl"); done
+    if (( nvis > 0 )); then qline="${qline}   ${UI_FAINT}$((cur+1))/${nvis}${UI_R}"
+    else                    qline="${qline}   ${UI_FAINT}0/${total}${UI_R}"; fi
+    out+=("$qline")
+    out+=("")
+
+    # --- Tana ---
+    if (( nvis > 0 )); then _ad "${vis[cur]}"; else DETAIL=(); DETAIL_SEC=-1; fi
+    # Panelga nechta tafsilot qatori sig'adi — maketga qarab farq qiladi.
+    if (( two_col )); then detail_clip "$body"
+    else                   detail_clip $(( body - page - 1 )); fi
+
+    local r vi oi left right lpad
+    if (( two_col )); then
+      for (( r = 0; r < body; r++ )); do
+        left=""
+        vi=$(( topv + r ))
+        if (( r < page && vi < nvis )); then
+          oi=${vis[vi]}
+          if (( vi == cur )); then left="${UI_BRAND}${ICO[arrow]}${UI_R} ${lrow[oi]}"
+          else                     left="  ${lrow[oi]}"; fi
+        elif (( r == 0 && nvis == 0 )); then
+          left="  ${S_NOMATCH}"
+        fi
+        ui_pad_v lpad "$left" "$lw"
+        right="${DETAIL[r]:-}"
+        out+=("  ${lpad} ${S_SEP} ${right}")
+      done
+    else
+      for (( r = 0; r < page; r++ )); do
+        vi=$(( topv + r ))
+        if (( vi < nvis )); then
+          oi=${vis[vi]}
+          if (( vi == cur )); then out+=("  ${UI_BRAND}${ICO[arrow]}${UI_R} ${displays[oi]}")
+          else                     out+=("    ${displays[oi]}"); fi
+        elif (( r == 0 && nvis == 0 )); then
+          out+=("  ${S_NOMATCH}")
+        else
+          out+=("")
+        fi
+      done
+      out+=("  ${S_RULE}")
+      local dr
+      for (( r = 0; r < body - page - 1; r++ )); do
+        dr="${DETAIL[r]:-}"
+        if [[ -n "$dr" ]]; then out+=("  ${dr}"); else out+=(""); fi
+      done
+    fi
+
+    # --- Pastki blok: chiziq + status bar + footer ---
+    out+=("  ${S_RULE}")
+    if (( nvis > 0 )); then _as "${vis[cur]}"; else S_STATUS="  ${UI_FAINT}${S_DASH}${UI_R}"; fi
+    out+=("$S_STATUS")
     out+=("$S_FOOT")
 
+    # UI_DUMP rejimida ramka STDOUT'ga, kursor boshqaruvisiz chiziladi —
+    # shunda maketni TTY'siz (testda) tekshirib bo'ladi.
+    if [[ -n "${AIDEVIX_UI_DUMP:-}" ]]; then
+      local L
+      for L in "${out[@]}"; do printf '%s\n' "$L"; done
+      return 0
+    fi
     printf '\033[H' >/dev/tty
     local L
     for L in "${out[@]}"; do printf '\r\033[K%s\n' "$L" >/dev/tty; done
   }
+
+  # --- TEST SEAM: bitta kadrni chizib chiqish -------------------------------
+  # AIDEVIX_UI_DUMP=1 — menyuni interaktiv ochmasdan, BIR kadrni stdout'ga
+  # chizadi va qaytadi. Bats testlari maketni (ikki ustun, tekislash, status
+  # bar) shu orqali tekshiradi; TTY/pty talab qilinmaydi.
+  # AIDEVIX_UI_DUMP_QUERY bilan qidiruv holatini ham sinash mumkin.
+  if [[ -n "${AIDEVIX_UI_DUMP:-}" ]]; then
+    query="${AIDEVIX_UI_DUMP_QUERY:-}"
+    _af
+    _ar
+    return 0
+  fi
 
   # Interaktiv qism: `(( ... )) && ...` chegara tekshiruvlari shart YOLG'ON bo'lsa
   # 1 qaytaradi (masalan `(( cur < 0 ))` cur>=0 bo'lganda). errexit/ERR-trap yoqiq
@@ -1465,10 +2038,11 @@ run_menu() {
   # Ilk ishga tushishda tilni so'raymiz (keyin saqlangan tildan foydalanamiz).
   choose_language
 
+  # Brend: ILK ishga tushishda to'liq blok, keyin ixcham sarlavha (BANNER_SEEN_FILE).
   case "$filter" in
-    free) banner "Aidevix CLI" "$(t '🆓 bepul agentlar — login/kalitsiz yoki bepul tier')" ;;
-    top)  banner "Aidevix CLI" "$(t '⭐ eng mashhur agentlar — vibecoding uchun')" ;;
-    *)    banner ;;
+    free) banner "Aidevix" "$(t 'bepul agentlar — login/kalitsiz yoki bepul tier')" ;;
+    top)  banner "Aidevix" "$(t 'eng mashhur agentlar')" ;;
+    *)    banner "Aidevix" ;;
   esac
 
   # Aidevix nima/nima emasligini ilk safar tushuntiramiz (chalkashlikка qarshi).
@@ -1482,7 +2056,10 @@ run_menu() {
   # --free / --top filtrlari (agar so'ralgan bo'lsa).
   case "$filter" in
     free)
-      rows="$(awk -F'\t' '$8 ~ /🆓/ || tolower($8) ~ /bepul|free/' <<<"$rows")"
+      # 10-maydon — parse bosqichida hisoblangan AUTHCLASS. Ilgari bu yerda
+      # xom emoji naqshi tekshirilardi; endi semantik maydon (emoji ham,
+      # matn ham classify_auth ichida bir joyda tushuniladi).
+      rows="$(awk -F'\t' '$10 == "free"' <<<"$rows")"
       [[ -n "$rows" ]] || { log_info "$(t 'Bepul agent topilmadi.')"; exit 0; }
       ;;
     top)
@@ -1699,7 +2276,7 @@ ensure_installed() {
     fi
   fi
   if [[ "$tool_missing" -eq 1 ]]; then
-    panel "$(t "❌ '%s' o'rnatilmadi — avval bitta dastur kerak" "$name")" \
+    ui_notice err "$(t "❌ '%s' o'rnatilmadi — avval bitta dastur kerak" "$name")" \
       "$(t "'%s'ni o'rnatish uchun kompyuteringizda \"%s\" bo'lishi shart," "$name" "$tool")" \
       "$(t 'lekin u topilmadi.')" \
       "" \
@@ -1722,7 +2299,7 @@ ensure_installed() {
     # O'rnatuvchi "bu OS qo'llab-quvvatlanmaydi" desa — adashtiruvchi (internet/
     # sudo/curl) sabablar o'rniga halol, aniq xabar beramiz.
     if printf '%s' "$log_text" | grep -qiE 'unsupported (operating system|os|platform|architecture)|not supported|no (prebuilt|pre-built|binary)|MINGW|MSYS|windows is not'; then
-      panel "$(t "🚫 '%s' bu operatsion tizimda qo'llab-quvvatlanmaydi" "$name")" \
+      ui_notice err "$(t "🚫 '%s' bu operatsion tizimda qo'llab-quvvatlanmaydi" "$name")" \
         "$(t "'%s' o'rnatuvchisi sizning tizimingizni (Windows / Git Bash —" "$name")" \
         "$(t 'MINGW64) qo'\''llab-quvvatlamasligini aytdi. Bu — internet yoki ruxsat')" \
         "$(t "muammosi EMAS; shunchaki bu agentning Windows uchun o'rnatuvchisi yo'q.")" \
@@ -1744,7 +2321,7 @@ ensure_installed() {
     # TLS/sertifikat "hali yaroqli emas" / "muddati o'tgan" → deyarli har doim
     # tizim SOATI noto'g'ri (orqada yoki oldinda). Internet emas — soatni tuzatish.
     if printf '%s' "$log_text" | grep -qiE 'certificate is not yet valid|cert(ificate)? .*not yet valid|not yet valid|certificate has expired|cert(ificate)? .*expired|CERT_NOT_YET_VALID|ERR_CERT_DATE_INVALID|date.*invalid'; then
-      panel "$(t "🕒 '%s' o'rnatilmadi — kompyuter soati noto'g'ri ko'rinadi" "$name")" \
+      ui_notice err "$(t "🕒 '%s' o'rnatilmadi — kompyuter soati noto'g'ri ko'rinadi" "$name")" \
         "$(t "Yuklab oluvchi xavfsizlik sertifikatini rad etdi: \"sertifikat hali")" \
         "$(t 'yaroqli emas" (yoki muddati o'\''tgan). Bu — internet muammosi EMAS;')" \
         "$(t "deyarli har doim kompyuteringizning SANA/VAQTI noto'g'ri o'rnatilgan.")" \
@@ -1763,7 +2340,7 @@ ensure_installed() {
       die 1 "$(t "'%s' o'rnatilmadi — kompyuter soatini tekshiring." "$name")"
     fi
 
-    panel "$(t "❌ '%s' o'rnatishda xatolik yuz berdi" "$name")" \
+    ui_notice err "$(t "❌ '%s' o'rnatishda xatolik yuz berdi" "$name")" \
       "$(t 'Quyidagi buyruq muvaffaqiyatsiz tugadi:')" \
       "    $install" \
       "" \
@@ -1798,7 +2375,7 @@ ensure_installed() {
   fi
 
   if ! command -v "$binary" >/dev/null 2>&1; then
-    panel "$(t "⚠️  '%s' o'rnatildi, lekin hali ishga tushmadi" "$name")" \
+    ui_notice warn "$(t "⚠️  '%s' o'rnatildi, lekin hali ishga tushmadi" "$name")" \
       "$(t 'Dastur o'\''rnatildi, biroq tizim "%s" buyrug'\''ini hali topa olmayapti.' "$binary")" \
       "$(t 'Bu odatda "PATH" sozlamasi yangilanmagani uchun bo'\''ladi.')" \
       "" \
@@ -1860,55 +2437,80 @@ update_agents() {
 
 # --- Muhit tashxisi (doctor) ----------------------------------------------
 doctor() {
-  banner "$(t 'Aidevix — Tashxis')" "$(t 'muhitingizni tekshiramiz')"
+  # shellcheck disable=SC2034  # lib/ui.sh funksiyalari UI_FD ni dinamik o'qiydi
+  local UI_FD=1                     # tashxis — ma'lumot, stdout'ga chiqadi
+  local w; w="$(ui_width)"
+  ui_header "${UI_MUTED}$(t 'tashxis')${UI_R}"
 
+  # d_row <ok|warn|err|off> <yorliq> <qiymat> — tashxisning YAGONA qator
+  # shakli. Ilgali har blok o'z printf'ini yozardi va belgilar/otступlar
+  # bir-biriga to'g'ri kelmasdi.
+  d_row() {
+    local kind="$1" label="$2" value="${3:-}" ic c
+    case "$kind" in
+      ok)   c="$UI_OK";    ic="${ICO[dot_on]}"  ;;
+      warn) c="$UI_WARN";  ic="${ICO[warn]}"    ;;
+      err)  c="$UI_ERR";   ic="${ICO[dot_off]}" ;;
+      *)    c="$UI_FAINT"; ic="${ICO[bullet]}"  ;;
+    esac
+    printf '  %s%s%s %s %s%s%s\n' "$c" "$ic" "$UI_R" \
+      "$(ui_pad "${UI_TEXT}${label}${UI_R}" 12)" "$UI_MUTED" "$value" "$UI_R"
+  }
+  d_section() { printf '\n  %s%s%s\n' "$UI_MUTED" "$1" "$UI_R"; }
+
+  d_section "$(t 'Vositalar:')"
   local tool
-  printf '%s%s%s\n' "${C_BOLD:-}" "$(t 'Vositalar:')" "${C_RESET:-}"
   for tool in bash fzf node npm python3 curl git; do
     if command -v "$tool" >/dev/null 2>&1; then
-      printf '  %b✓%b %-8s %s\n' "${C_GREEN:-}" "${C_RESET:-}" "$tool" "$(command -v "$tool")"
+      d_row ok "$tool" "$(command -v "$tool")"
     else
-      printf '  %b✗%b %-8s %s\n' "${C_RED:-}" "${C_RESET:-}" "$tool" "$(t 'topilmadi')"
+      d_row err "$tool" "$(t 'topilmadi')"
     fi
   done
 
-  printf '\n%s%s%s\n' "${C_BOLD:-}" "$(t 'PATH tekshiruvi:')" "${C_RESET:-}"
+  d_section "$(t 'PATH tekshiruvi:')"
   if command -v npm >/dev/null 2>&1; then
     local prefix bindir
     prefix="$(npm config get prefix 2>/dev/null || true)"
-    printf '  npm prefix: %s\n' "${prefix:-$(t '(aniqlanmadi)')}"
+    d_row off "npm prefix" "${prefix:-$(t '(aniqlanmadi)')}"
     for bindir in "$prefix/bin" "$prefix"; do
       [[ -d "$bindir" ]] || continue
       if [[ ":$PATH:" == *":$bindir:"* ]]; then
-        printf '  %b✓%b %s %s\n' "${C_GREEN:-}" "${C_RESET:-}" "$(t 'PATH ichida:')" "$bindir"
+        d_row ok "PATH" "$bindir"
       else
-        printf '  %b✗%b %s\n' "${C_YELLOW:-}" "${C_RESET:-}" "$(t "PATH da YO'Q: %s  (aidevix uni o'zi qo'shadi)" "$bindir")"
+        d_row warn "PATH" "$(t "YO'Q: %s  (aidevix uni o'zi qo'shadi)" "$bindir")"
       fi
     done
   else
-    printf '  %b!%b %s\n' "${C_YELLOW:-}" "${C_RESET:-}" "$(t "npm topilmadi — npm orqali o'rnatiladigan agentlar ishlamaydi.")"
+    d_row warn "npm" "$(t "npm topilmadi — npm orqali o'rnatiladigan agentlar ishlamaydi.")"
   fi
   if [[ -d "$HOME/.local/bin" ]]; then
     if [[ ":$PATH:" == *":$HOME/.local/bin:"* ]]; then
-      printf '  %b✓%b %s %s\n' "${C_GREEN:-}" "${C_RESET:-}" "$(t 'PATH ichida:')" "$HOME/.local/bin"
+      d_row ok "PATH" "$HOME/.local/bin"
     else
-      printf '  %b✗%b %s %s\n' "${C_YELLOW:-}" "${C_RESET:-}" "$(t "PATH da YO'Q:")" "$HOME/.local/bin"
+      d_row warn "PATH" "$(t "YO'Q: %s" "$HOME/.local/bin")"
     fi
   fi
 
-  printf '\n%s%s%s\n' "${C_BOLD:-}" "$(t 'Global statistika:')" "${C_RESET:-}"
+  d_section "$(t 'Interfeys:')"
+  d_row off "$(t 'ikonkalar')" "${UI_ICON_TIER:-unicode}"
+  d_row off "$(t 'ranglar')" "$UI_DEPTH"
+  d_row off "$(t 'til')" "${AIDEVIX_LANG_RESOLVED:-uz}"
+  d_row off "$(t 'eni')" "$w"
+
+  d_section "$(t 'Global statistika:')"
   if global_stats_enabled; then
-    printf '  %b✓%b %s\n' "${C_GREEN:-}" "${C_RESET:-}" "$(t 'yoqilgan — server: %s' "$AIDEVIX_STATS_URL")"
+    d_row ok "$(t 'holat')" "$(t 'yoqilgan — server: %s' "$AIDEVIX_STATS_URL")"
     if [[ -r "$GLOBAL_CACHE" ]]; then
-      printf '  %b✓%b %s\n' "${C_GREEN:-}" "${C_RESET:-}" "$(t 'kesh mavjud: %s' "$GLOBAL_CACHE")"
+      d_row ok "$(t 'kesh')" "$GLOBAL_CACHE"
     else
-      printf '  %b!%b %s\n' "${C_YELLOW:-}" "${C_RESET:-}" "$(t "kesh hali yo'q (keyingi menyuda yangilanadi)")"
+      d_row warn "$(t 'kesh')" "$(t "hali yo'q (keyingi menyuda yangilanadi)")"
     fi
   else
-    printf '  %b•%b %s\n' "${C_GRAY:-}" "${C_RESET:-}" "$(t "o'chiq (opt-in). Yoqish: aidevix --stats on")"
+    d_row off "$(t 'holat')" "$(t "o'chiq (opt-in). Yoqish: aidevix --stats on")"
   fi
 
-  printf '\n%s%s%s\n' "${C_BOLD:-}" "$(t 'Agentlar holati:')" "${C_RESET:-}"
+  printf '\n'
   list_agents
 }
 
@@ -2069,13 +2671,67 @@ fetch_npm_latest() {
   fi
   mkdir -p "$STATE_DIR" 2>/dev/null || return 0
   # dist-tags endpoint'i kichik: {"latest":"X.Y.Z", ...}. sed bilan ajratamiz.
-  ( curl -fsS -m 5 "https://registry.npmjs.org/-/package/$NPM_PKG/dist-tags" 2>/dev/null \
-      | sed -n 's/.*"latest":"\([0-9][0-9A-Za-z.\-]*\)".*/\1/p' >"$NPM_LATEST_CACHE.tmp" 2>/dev/null \
+  # curl'ning O'ZI o'lchagan javob vaqti (%{time_total}) LATENCY_FILE'ga
+  # yoziladi — status bardagi "ms" ko'rsatkichi AYNAN shu haqiqiy o'lchov.
+  ( curl -fsS -m 5 -w '%{time_total}' \
+        -o "$NPM_LATEST_CACHE.raw" \
+        "https://registry.npmjs.org/-/package/$NPM_PKG/dist-tags" 2>/dev/null \
+        >"$LATENCY_FILE.tmp" \
+      && sed -n 's/.*"latest":"\([0-9][0-9A-Za-z.\-]*\)".*/\1/p' \
+           <"$NPM_LATEST_CACHE.raw" >"$NPM_LATEST_CACHE.tmp" 2>/dev/null \
       && [[ -s "$NPM_LATEST_CACHE.tmp" ]] \
       && mv -f "$NPM_LATEST_CACHE.tmp" "$NPM_LATEST_CACHE" 2>/dev/null \
-      && printf '%s\n' "$now" >"$NPM_CHECK_STAMP" 2>/dev/null \
-      || rm -f "$NPM_LATEST_CACHE.tmp" 2>/dev/null ) >/dev/null 2>&1 &
+      && mv -f "$LATENCY_FILE.tmp" "$LATENCY_FILE" 2>/dev/null \
+      && printf '%s\n' "$now" >"$NPM_CHECK_STAMP" 2>/dev/null
+    rm -f "$NPM_LATEST_CACHE.tmp" "$NPM_LATEST_CACHE.raw" "$LATENCY_FILE.tmp" 2>/dev/null
+  ) >/dev/null 2>&1 &
   return 0
+}
+
+# ===========================================================================
+#  STATUS BAR MAYDONLARI
+# ===========================================================================
+#
+# MUHIM: Aidevix — ishga tushirgich. U hech qachon LLM API'ga murojaat
+# qilmaydi, shuning uchun "context usage" yoki "token usage" kabi
+# ko'rsatkichlarni O'LCHAY OLMAYDI — ular bu yerda ATAYLAB yo'q (to'qib
+# chiqarilgan raqam ko'rsatgandan ko'ra, ko'rsatmagan afzal). Status barda
+# faqat haqiqatan o'lchanadigan/o'qiladigan narsalar bor:
+#   • provayder + model    — agent konfiguratsiyasi va MUHIT o'zgaruvchisidan
+#   • API kalit holati     — muhitda bormi/yo'qmi
+#   • agentlar sanog'i     — o'rnatilgan/jami
+#   • versiya + yangilanish — VERSION va npm registry keshi
+#   • latency              — curl o'lchagan oxirgi tarmoq javob vaqti
+
+# status_version_field — "v1.7.4 ● oxirgi" yoki "v1.7.4 ▲ 1.8.0 bor".
+status_version_field() {
+  local latest=""
+  [[ -r "$NPM_LATEST_CACHE" ]] && latest="$(cat "$NPM_LATEST_CACHE" 2>/dev/null || true)"
+  if [[ -n "$latest" ]] && version_gt "$latest" "$AIDEVIX_VERSION"; then
+    printf '%sv%s %s %s%s' "$UI_WARN" "$AIDEVIX_VERSION" "${ICO[down]}" \
+      "$(t 'yangilanish: %s' "$latest")" "$UI_R"
+  else
+    printf '%sv%s%s %s%s %s%s' "$UI_MUTED" "$AIDEVIX_VERSION" "$UI_R" \
+      "$UI_OK" "${ICO[dot_on]}" "$(t "eng so'nggi")" "$UI_R"
+  fi
+}
+
+# status_latency_field — oxirgi O'LCHANGAN tarmoq javob vaqti (ms).
+# Hech qachon o'lchanmagan bo'lsa — maydon umuman chiqmaydi (bo'sh qaytadi).
+status_latency_field() {
+  [[ -r "$LATENCY_FILE" ]] || return 0
+  local sec ms
+  sec="$(cat "$LATENCY_FILE" 2>/dev/null || true)"
+  [[ "$sec" =~ ^[0-9]+([.][0-9]+)?$ ]] || return 0
+  # sekund → millisekund, tashqi dastursiz (awk/bc yo'q): kasrni kesib olamiz.
+  local int="${sec%%.*}" frac="${sec#*.}"
+  [[ "$frac" == "$sec" ]] && frac="000"
+  frac="${frac}000"; frac="${frac:0:3}"
+  ms=$(( 10#${int:-0} * 1000 + 10#$frac ))
+  local c="$UI_OK"
+  (( ms > 300 ))  && c="$UI_WARN"
+  (( ms > 1000 )) && c="$UI_ERR"
+  printf '%s%s %sms%s' "$c" "${ICO[clock]}" "$ms" "$UI_R"
 }
 
 # npm_autoupdate_apply <latest> [orig-args...] — yangi versiyaga yangilashni
@@ -2143,7 +2799,7 @@ maybe_npm_update_hint() {
     npm_autoupdate_apply "$latest" "$@" && return 0
   fi
 
-  panel "$(t '🔄 Aidevix yangi versiya bor (%s → %s)' "$AIDEVIX_VERSION" "$latest")" \
+  ui_notice info "$(t '🔄 Aidevix yangi versiya bor (%s → %s)' "$AIDEVIX_VERSION" "$latest")" \
     "$(t 'Yangilash uchun terminalga yozing:')" \
     "    npm i -g $NPM_PKG@latest" \
     "$(t "Eslatmani o'chirish: AIDEVIX_NO_AUTOUPDATE=1")"
@@ -2156,7 +2812,7 @@ main() {
 
   # Preview qism-jarayoni — augment va boshqa og'ir ishlardan oldin.
   if [[ "${1:-}" == "__preview" ]]; then
-    preview_agent "${2:-}" "${3:-}"
+    preview_agent "${2:-}" "${3:-}" "${4:-52}"
     exit 0
   fi
 
@@ -2177,6 +2833,7 @@ main() {
     -a|--add)      add_agent ;;
     -s|--stats)    stats_cmd "${2:-}" ;;
     -L|--lang)     lang_cmd "${2:-}" ;;
+    -i|--icons)    icons_cmd "${2:-}" ;;
     -f|--free)     run_menu free ;;
     -t|--top)      run_menu top ;;
     "")            run_menu ;;

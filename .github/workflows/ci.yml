@@ -75,7 +75,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Bats'ni o'rnatish
-        uses: bats-core/bats-action@3.0.0
+        uses: bats-core/bats-action@4.0.0
         with:
           # Bizga faqat bats-core kerak — qo'shimcha kutubxonalarsiz.
           support-install: false

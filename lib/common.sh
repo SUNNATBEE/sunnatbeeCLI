@@ -82,11 +82,25 @@ case "${LC_ALL:-${LC_CTYPE:-${LANG:-UTF-8}}}" in
   *)                                        UI_UTF8=1 ;;
 esac
 
+# --- Dizayn tizimi (ranglar, ikonkalar, layout) ---------------------------
+# UI_TTY/UI_UTF8 aniqlangandan KEYIN yuklanadi — ui.sh ularga tayanadi.
+__common_ui="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/ui.sh"
+if [[ -r "$__common_ui" ]]; then
+  # shellcheck source=ui.sh
+  source "$__common_ui"
+  ui_icons_detect
+fi
+unset __common_ui
+
 # --- Log funksiyalari (barchasi stderr'ga yozadi) -------------------------
-log_info()    { printf '%s[i]%s %s\n'  "$C_BLUE"   "$C_RESET" "$*" >&2; }
-log_warn()    { printf '%s[!]%s %s\n'  "$C_YELLOW" "$C_RESET" "$*" >&2; }
-log_error()   { printf '%s[x]%s %s\n'  "$C_RED"    "$C_RESET" "$*" >&2; }
-log_success() { printf '%s[✓]%s %s\n'  "$C_GREEN"  "$C_RESET" "$*" >&2; }
+# Belgilar ikonka pog'onasidan (nerd/unicode/ascii), ranglar semantik
+# tokenlardan keladi — butun interfeysda bir xil "til".
+log_info()    { printf '  %s%s%s %s\n' "$UI_INFO" "${ICO[info]:-i}" "$UI_R" "$*" >&2; }
+log_warn()    { printf '  %s%s%s %s\n' "$UI_WARN" "${ICO[warn]:-!}" "$UI_R" "$*" >&2; }
+log_error()   { printf '  %s%s%s %s\n' "$UI_ERR"  "${ICO[err]:-x}"  "$UI_R" "$*" >&2; }
+log_success() { printf '  %s%s%s %s\n' "$UI_OK"   "${ICO[ok]:-+}"   "$UI_R" "$*" >&2; }
+# log_step — ko'p bosqichli amallarda joriy qadam (so'nik, diqqat tortmaydi).
+log_step()    { printf '  %s%s %s%s\n' "$UI_MUTED" "${ICO[bullet]:--}" "$*" "$UI_R" >&2; }
 
 # die <exit_code> <message...>
 #   Xato xabarini chiqaradi va skriptni berilgan exit-code bilan to'xtatadi.
@@ -115,14 +129,13 @@ require_cmd() {
 # panel <SARLAVHA> [QATOR...]
 #   Diqqatni tortadigan, ramkali xabar chiqaradi. Har bir QATOR — alohida
 #   qator. Maqsad: xatoni hatto tajribasiz odam ham tushunsin.
+# Endi bu — MOSLIK qobig'i: butun chizish ui_notice()ga o'tdi (lib/ui.sh).
+# Eski qalin sariq ramka o'rniga bitta nozik chap aksent chizig'i ishlatiladi.
+# Yangi kod TO'G'RIDAN-TO'G'RI ui_notice <level> chaqirsin — level xabarning
+# ma'nosini beradi (ok/warn/err/info/ai), panel esa doim "warn" edi.
 panel() {
   local title="$1"; shift
-  printf '\n%s%s┌─ %s%s\n' "${C_YELLOW}" "${C_BOLD}" "$title" "${C_RESET}" >&2
-  local line
-  for line in "$@"; do
-    printf '%s│%s %s\n' "${C_YELLOW}" "${C_RESET}" "$line" >&2
-  done
-  printf '%s└────────────────────────────────────────%s\n\n' "${C_YELLOW}" "${C_RESET}" >&2
+  ui_notice warn "$title" "$@"
 }
 
 # tool_hint <tool>
@@ -184,118 +197,114 @@ open_url() {
   return 0
 }
 
-# hr [eni] — gorizontal chiziq satrini QAYTARADI (chop etmaydi).
-hr() {
-  local w="${1:-46}" ch i s=''
-  if [[ "${UI_UTF8:-1}" -eq 1 ]]; then ch='━'; else ch='-'; fi
-  for ((i = 0; i < w; i++)); do s+="$ch"; done
-  printf '%s' "$s"
-}
+# hr [eni] — gorizontal ajratgich satrini QAYTARADI (chop etmaydi).
+# Moslik qobig'i: chizish ui_rule()ga o'tdi (lib/ui.sh). Og'ir '━' o'rniga
+# yengil '─' — bu vizual shovqinni sezilarli kamaytiradi.
+hr() { ui_rule "${1:-46}"; }
 
-# banner [sarlavha] [kichik-sarlavha]
-#   Aidevix CLI brendi: AD monogrammasi (gradient) + harfma-harf animatsiya.
-#   TTY bo'lmasa — oddiy matn. assets/log.jpg dagi "AD" logosining ASCII shakli.
-banner() {
-  local title="${1:-Aidevix CLI}" subtitle="${2:-$(t 'barcha AI agentlar — bitta pultda')}"
+# --- Brend sarlavhasi -----------------------------------------------------
+# Falsafa: katta ASCII logo — TANISHUV uchun, har kunlik ish uchun emas.
+# Shuning uchun to'liq logo FAQAT ilk ishga tushishda (yoki --version'da)
+# ko'rsatiladi; keyin har safar bir qatorli ixcham sarlavha chiqadi.
+# Buni BANNER_FULL=1 bilan majburlash, BANNER_FULL=0 bilan o'chirish mumkin.
+
+# banner_full [sarlavha] [kichik-sarlavha] — to'liq brend bloki (ilk run).
+banner_full() {
+  local title="${1:-Aidevix}" subtitle="${2:-$(t 'barcha AI agentlar — bitta pultda')}"
   if [[ "${UI_TTY:-0}" -ne 1 ]]; then
     printf '\n  %s\n  %s\n\n' "$title" "$subtitle" >&2
     return 0
   fi
-
   printf '\n' >&2
-
-  # --- AD logosi (assets/log.jpg ASCII shakli) ---------------------------
+  # Monogramma — endi gradientsiz va animatsiyasiz: bitta brend rangi.
+  # Harfma-harf "yozilish" effekti olib tashlandi (ishga tushishni sekinlashtirardi
+  # va professional CLI'larda uchramaydi).
   if [[ "${UI_UTF8:-1}" -eq 1 ]]; then
     local -a logo=(
-'    █████╗ ██████╗ '
-'   ██╔══██╗██╔══██╗'
-'   ███████║██║  ██║'
-'   ██╔══██║██║  ██║'
-'   ██║  ██║██████╔╝'
-'   ╚═╝  ╚═╝╚═════╝ '
+'   █████╗ ██████╗ '
+'  ██╔══██╗██╔══██╗'
+'  ███████║██║  ██║'
+'  ██╔══██║██║  ██║'
+'  ██║  ██║██████╔╝'
+'  ╚═╝  ╚═╝╚═════╝ '
     )
-    local -a grad=("$C_LG1" "$C_LG2" "$C_LG3" "$C_LG4" "$C_LG5" "$C_LG6")
-    local k
-    for k in "${!logo[@]}"; do
-      printf '%s%s%s%s\n' "$C_BOLD" "${grad[k]}" "${logo[k]}" "$C_RESET" >&2
-      [[ "${AI_ANIM:-0}" -eq 1 ]] && sleep 0.045 || true
+    local row
+    for row in "${logo[@]}"; do
+      printf '%s%s%s%s\n' "$UI_B" "$UI_BRAND" "$row" "$UI_R" >&2
     done
   else
-    printf '%s    /\\  ___ %s\n' "$C_G1" "$C_RESET" >&2
-    printf '%s   /__\\ |  |%s\n' "$C_G3" "$C_RESET" >&2
-    printf '%s        |__|%s\n' "$C_G4" "$C_RESET" >&2
+    printf '%s   /\  ___ %s\n' "$UI_BRAND" "$UI_R" >&2
+    printf '%s  /__\ |  |%s\n' "$UI_BRAND" "$UI_R" >&2
+    printf '%s       |__|%s\n' "$UI_BRAND" "$UI_R" >&2
+  fi
+  printf '\n  %s%s%s   %s%s%s\n' "$UI_B" "$title" "$UI_R" "$UI_MUTED" "$subtitle" "$UI_R" >&2
+  printf '  %s\n\n' "$(ui_rule 44)" >&2
+}
+
+# banner [sarlavha] [kichik-sarlavha]
+#   Standart chaqiruv: ilk marta — to'liq blok, keyin — ixcham sarlavha.
+#   "Ilk marta" belgisi BANNER_SEEN_FILE bilan aniqlanadi (chaqiruvchi beradi).
+banner() {
+  local title="${1:-Aidevix}" subtitle="${2:-}"
+  local seen="${BANNER_SEEN_FILE:-}"
+  local full=0
+  if [[ -n "${BANNER_FULL:-}" ]]; then
+    full="$BANNER_FULL"
+  elif [[ -n "$seen" && ! -e "$seen" ]]; then
+    full=1
+    mkdir -p "$(dirname "$seen")" 2>/dev/null && : >"$seen" 2>/dev/null || true
   fi
 
-  # --- Sarlavha — harfma-harf "yozilish" animatsiyasi --------------------
-  printf '\n  %s✦  ' "$C_BOLD" >&2
-  if [[ "${AI_ANIM:-0}" -eq 1 ]]; then
-    local j
-    for ((j = 0; j < ${#title}; j++)); do
-      printf '%s%s' "$C_TITLE" "${title:j:1}" >&2
-      sleep 0.03
-    done
-    printf '%s\n' "$C_RESET" >&2
+  if (( full )); then
+    banner_full "$title" "$subtitle"
+    return 0
+  fi
+  # Ixcham rejim: bir qator brend + (bo'lsa) kontekst matni + nozik chiziq.
+  if [[ "${UI_TTY:-0}" -ne 1 ]]; then
+    [[ -n "$subtitle" ]] && printf '\n  %s — %s\n\n' "$title" "$subtitle" >&2 \
+                         || printf '\n  %s\n\n' "$title" >&2
+    return 0
+  fi
+  printf '\n' >&2
+  if [[ -n "$subtitle" ]]; then
+    ui_header "${UI_MUTED}${subtitle}${UI_R}"
   else
-    printf '%s%s%s\n' "$C_TITLE" "$title" "$C_RESET" >&2
+    ui_header
   fi
-
-  printf '  %s%s%s\n' "$C_GRAY" "$subtitle" "$C_RESET" >&2
-
-  local s1 s2
-  s1="$(hr 18)"; s2="$(hr 18)"
-  printf '  %s%s%s%s%s\n\n' "$C_G1" "$s1" "$C_G4" "$s2" "$C_RESET" >&2
 }
 
 # SPIN_LOG — oxirgi spin_run chiqishi shu faylda saqlanadi (xatoni ko'rsatish uchun).
 SPIN_LOG=""
 
 # spin_run <xabar> <bash-buyrug'i-satri>
-#   Buyruqni ishga tushiradi, yonida aylanuvchi spinner + o'tgan vaqtni
-#   ko'rsatadi. TTY/animatsiya bo'lmasa — oddiy bajaradi (chiqish ko'rinadi).
+#   Buyruqni ishga tushiradi, yonida nozik spinner + o'tgan vaqt ko'rsatadi.
+#   TTY/animatsiya bo'lmasa — oddiy bajaradi (chiqish ko'rinadi).
 #   Chiqishni tugagach SPIN_LOG'ga saqlaydi. Buyruq exit-kodini qaytaradi.
+#
+#   DIZAYN: ilgari bu yerda 22 belgilik sakrovchi "komet" progress-bar bor edi.
+#   U INDETERMINAT ishni DETERMINAT ko'rsatardi (yolg'on signal) va ekranni
+#   shovqinga to'ldirardi. Endi: bitta spinner + xabar + o'tgan vaqt.
 spin_run() {
   local msg="$1" cmd="$2"
   SPIN_LOG="$(mktemp)"
 
   if [[ "${AI_ANIM:-0}" -ne 1 ]]; then
-    printf '%s▸%s %s ...\n' "$C_CYAN" "$C_RESET" "$msg" >&2
+    printf '  %s%s%s %s\n' "$UI_MUTED" "${ICO[bullet]:--}" "$UI_R" "$msg" >&2
     bash -c "$cmd" 2>&1 | tee "$SPIN_LOG" >&2
     return "${PIPESTATUS[0]}"
   fi
 
-  # Spinner ramkalari + progress-bar belgilarini Unicode/ASCII'ga moslaymiz.
-  local frames comet trail1 trail2 dimc
-  if [[ "${UI_UTF8:-1}" -eq 1 ]]; then
-    frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
-    comet='█'; trail1='▓'; trail2='▒'; dimc='░'
-  else
-    frames=('|' '/' '-' '\')
-    comet='#'; trail1='='; trail2='-'; dimc='.'
-  fi
-  local n=${#frames[@]} barw=22
+  local frames; frames="$(ui_frames)"
+  local n=${#frames}
 
   bash -c "$cmd" >"$SPIN_LOG" 2>&1 &
   local pid=$! i=0 start=$SECONDS el
   printf '\033[?25l' >&2
   while kill -0 "$pid" 2>/dev/null; do
     el=$((SECONDS - start))
-    # Indeterminat "komet": chap-o'ngga sakraydi, orqasida gradientli iz qoldiradi.
-    local period=$(( (barw - 1) * 2 )); (( period < 1 )) && period=1
-    local pos=$(( i % period )); (( pos >= barw )) && pos=$(( period - pos ))
-    local bar="" k dist
-    for ((k = 0; k < barw; k++)); do
-      dist=$(( k - pos )); (( dist < 0 )) && dist=$(( -dist ))
-      if   (( dist == 0 )); then bar+="${C_G1}${comet}"
-      elif (( dist == 1 )); then bar+="${C_G3}${trail1}"
-      elif (( dist == 2 )); then bar+="${C_G4}${trail2}"
-      else                        bar+="${C_GRAY}${dimc}"
-      fi
-    done
-    printf '\r %s%s%s %s%s%s  %s%s  %s%2ss%s\033[K' \
-      "$C_CYAN" "${frames[i % n]}" "$C_RESET" \
-      "$C_BOLD" "$msg" "$C_RESET" \
-      "$bar" "$C_RESET" \
-      "$C_GRAY" "$el" "$C_RESET" >&2
+    printf '\r  %s%s%s %s  %s%ss%s\033[K' \
+      "$UI_BRAND" "${frames:$((i % n)):1}" "$UI_R" \
+      "$msg" "$UI_FAINT" "$el" "$UI_R" >&2
     i=$((i + 1))
     sleep 0.08
   done
@@ -303,78 +312,26 @@ spin_run() {
   printf '\033[?25h' >&2
   el=$((SECONDS - start))
 
-  # Yakuniy holat — to'liq to'ldirilgan bar (yashil/qizil).
-  local fullbar="" k
-  for ((k = 0; k < barw; k++)); do fullbar+="$comet"; done
   if [[ "$rc" -eq 0 ]]; then
-    printf '\r %s✓%s %s  %s%s%s  %s(%ss)%s\033[K\n' \
-      "$C_GREEN" "$C_RESET" "$msg" "$C_GREEN" "$fullbar" "$C_RESET" "$C_GRAY" "$el" "$C_RESET" >&2
+    printf '\r  %s%s%s %s  %s%ss%s\033[K\n' \
+      "$UI_OK" "${ICO[ok]:-+}" "$UI_R" "$msg" "$UI_FAINT" "$el" "$UI_R" >&2
   else
-    printf '\r %s✗%s %s  %s%s%s  %s(%ss)%s\033[K\n' \
-      "$C_RED" "$C_RESET" "$msg" "$C_RED" "$fullbar" "$C_RESET" "$C_GRAY" "$el" "$C_RESET" >&2
+    printf '\r  %s%s%s %s  %s%ss%s\033[K\n' \
+      "$UI_ERR" "${ICO[err]:-x}" "$UI_R" "$msg" "$UI_FAINT" "$el" "$UI_R" >&2
   fi
   return "$rc"
 }
 
-# loader_3d <holat-matni> <nom> — 3D "AD" logosi + animatsion gradient "sweep"
-# va to'lib boruvchi loader. Agent ishga tushirilishi/o'rnatilishi oldidan
-# foydalanuvchiga "ishlayapti" hissini beradi. Logo bloklari uch o'lchamli
-# ko'rinadi; gradient ranglar har frame'da siljib, yorug'lik harakati (3D) effekti.
-# Animatsiya o'chiq (TTY yo'q / CI / NO_COLOR / AI_NO_ANIM) — oddiy bir qatorli matn.
-loader_3d() {
-  local status="$1" name="${2:-}"
-  if [[ "${AI_ANIM:-0}" -ne 1 ]]; then
-    printf '\n  %s%s%s%s  %s%s%s\n\n' \
-      "${C_BOLD}" "${C_G3}" "$status" "${C_RESET}" "${C_TITLE}" "$name" "${C_RESET}" >&2
-    return 0
-  fi
-
-  local -a logo
-  if [[ "${UI_UTF8:-1}" -eq 1 ]]; then
-    logo=( \
-'  █████╗ ██████╗ ' \
-' ██╔══██╗██╔══██╗' \
-' ███████║██║  ██║' \
-' ██╔══██║██║  ██║' \
-' ██║  ██║██████╔╝' \
-' ╚═╝  ╚═╝╚═════╝ ' )
-  else
-    logo=( '  /\  ___ ' ' /__\ |  |' '      |__|' )
-  fi
-  local nrows=${#logo[@]}
-  # Gradient sweep palitrasi (cyan→ko'k→pushti, aylanma — yorug'lik harakati).
-  local -a pal=(51 45 39 33 99 201 201 99 33 39 45 51)
-  local np=${#pal[@]} barw=22 frames=${#pal[@]}
-  local f row idx filled k bar ch
-
-  printf '\033[?25l' >&2                          # kursorni yashir
-  local i; for ((i = 0; i < nrows + 1; i++)); do printf '\n' >&2; done  # joy ochish
-
-  for ((f = 0; f < frames; f++)); do
-    printf '\033[%dA' "$((nrows + 1))" >&2        # logo+bar boshiga qaytamiz
-    for ((row = 0; row < nrows; row++)); do
-      idx=$(( (row + f) % np ))
-      printf '\r\033[K  %s\033[38;5;%sm%s%s\n' \
-        "${C_BOLD}" "${pal[idx]}" "${logo[row]}" "${C_RESET}" >&2
-    done
-    filled=$(( (f + 1) * barw / frames )); bar=''
-    for ((k = 0; k < barw; k++)); do
-      if   (( k <  filled - 1 )); then ch='█'
-      elif (( k == filled - 1 )); then ch='▓'
-      else ch='░'; fi
-      bar+="$ch"
-    done
-    printf '\r\033[K  %s\033[38;5;%sm%s%s  %s%s%s %s%s%s\n' \
-      "${C_BOLD}" "${pal[f % np]}" "$bar" "${C_RESET}" \
-      "${C_G3}" "$status" "${C_RESET}" "${C_TITLE}" "$name" "${C_RESET}" >&2
-    sleep 0.05
-  done
-  printf '\033[?25h' >&2                           # kursorni qaytar
-}
-
-# ui_launch <nom> — agentni ishga tushirishdan oldingi 3D animatsion loader.
+# ui_launch <nom> — agentni ishga tushirishdan oldingi holat ko'rsatkichi.
+#   Ilgari bu 3D gradient "AD" logosi + sweep animatsiyasi edi (~0.6 s kutish,
+#   6 qator ekran). Endi — bitta qator: agent nomi + "ishga tushirilmoqda".
+#   Ishga tushirish exec bilan darhol bo'ladi; foydalanuvchini kutdirmaymiz.
 ui_launch() {
-  loader_3d "$(t '🚀 Ishga tushirilmoqda')" "${1:-}"
+  local name="${1:-}"
+  printf '\n  %s%s%s  %s%s%s  %s%s%s\n\n' \
+    "$UI_BRAND" "${ICO[rocket]:->}" "$UI_R" \
+    "$UI_B" "$name" "$UI_R" \
+    "$UI_MUTED" "$(t 'ishga tushirilmoqda')" "$UI_R" >&2
 }
 
 # --- Fonda aylanuvchi yuklash ko'rsatkichi (menyu tayyorlanayotganda) -------
@@ -386,20 +343,19 @@ UI_SPIN_PID=""
 ui_spin_start() {
   local msg="${1:-}"
   if [[ "${AI_ANIM:-0}" -ne 1 ]]; then
-    printf '  %s▸%s %s ...\n' "${C_CYAN}" "${C_RESET}" "$msg" >&2
+    printf '  %s%s %s%s\n' "$UI_MUTED" "${ICO[bullet]:--}" "$msg" "$UI_R" >&2
     return 0
   fi
-  local frames
-  if [[ "${UI_UTF8:-1}" -eq 1 ]]; then frames='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'; else frames='|/-\'; fi
+  local frames; frames="$(ui_frames)"
   printf '\033[?25l' >&2                         # kursorni yashir
   (
     trap 'exit 0' TERM
     trap - ERR EXIT                              # ota-trapni meros qilmaymiz
     local i=0 n=${#frames}
     while :; do
-      printf '\r %s%s%s %s%s%s\033[K' \
-        "${C_CYAN}" "${frames:$((i % n)):1}" "${C_RESET}" \
-        "${C_GRAY}" "$msg" "${C_RESET}" >&2
+      printf '\r  %s%s%s %s%s%s\033[K' \
+        "${UI_BRAND}" "${frames:$((i % n)):1}" "${UI_R}" \
+        "${UI_MUTED}" "$msg" "${UI_R}" >&2
       i=$((i + 1)); sleep 0.08
     done
   ) &

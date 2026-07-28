@@ -238,10 +238,82 @@ aidevix              # opens the menu 🎉
 aidevix
 ```
 
-Type to search → pick with `↑/↓` → press `ENTER`. On the right, the selected
-agent's details (status, command, install method) appear live.
+```text
+  ◆ Aidevix
+  ────────────────────────────────────────────────────────────────────────────────────────
+  › search   1/28
 
-> 💡 No `fzf`? The same thing shows as a simple **numeric menu** — nothing is lost.
+  ▸ ● Claude Code                        │ Claude Code  ● installed
+    ● OpenAI Codex                       │
+    ● Gemini CLI                         │ Anthropic's official Claude coding agent
+    ○ GitHub Copilot                     │
+    ● OpenCode                           │ command   claude
+    ○ Qwen Code                          │ group     Coding
+    ○ Cursor Agent                       │ provider  anthropic
+    ● Freebuff                           │ auth      ▪ API key
+    ○ Codebuff                           │ docs      https://console.anthropic.com/set…
+    ○ Aider                              │
+    ○ Crush                              │ install
+    ○ Continue                           │ npm install -g @anthropic-ai/claude-code@lat…
+    ○ Plandex                            │
+  ────────────────────────────────────────────────────────────────────────────────────────
+  ◆ anthropic │ — │ ○ no key │ 7/28 installed │ v1.8.0 ● up to date
+  ↑↓ move   ⏎ launch   a-z search   esc quit
+```
+
+Type to search → pick with `↑/↓` → press `ENTER`. The **right column** shows the
+selected agent's details live (status, command, provider, auth requirement,
+install method). The **status bar** at the bottom shows provider, model, API-key
+state, installed/total and version.
+
+> 💡 No `fzf`? The same thing runs as the built-in `↑/↓` menu; with no terminal at
+> all it falls back to a **numeric menu**. Nothing is lost.
+
+### 📐 Narrow terminals — automatic stacked layout
+
+Below **84 columns** the two-column layout automatically stacks — list on top,
+details underneath:
+
+```text
+  ◆ Aidevix
+  ────────────────────────────────────────────────────────────────────
+  › search   1/28
+
+  ▸ ●  Claude Code         Anthropic's offici…
+    ●  OpenAI Codex        OpenAI Codex termi…
+    ●  Gemini CLI          Google Gemini term…
+    ○  GitHub Copilot      GitHub Copilot CLI…
+    ●  OpenCode            Open-source termin…
+  ────────────────────────────────────────────────────────────────────
+  Claude Code  ● installed
+
+  Anthropic's official Claude coding agent
+
+  command   claude
+  group     Coding
+  provider  anthropic
+  ────────────────────────────────────────────────────────────────────
+  ◆ anthropic │ — │ ○ no key │ 7/28 installed │ v1.8.0 ● up to date
+  ↑↓ move   ⏎ launch   a-z search   esc quit
+```
+
+### 🎨 Icon styles (`--icons`)
+
+Interface glyphs come in **three tiers**, detected automatically (is a Nerd Font
+installed · is the terminal UTF-8):
+
+| Tier | When | Sample |
+|---|---|---|
+| `nerd` | A Nerd Font is detected |    |
+| `unicode` | Ordinary UTF-8 terminal (default) | `◆ ● ○ ▪ ▸ │ ─` |
+| `ascii` | `LANG=C`, no UTF-8, or a legacy console | `# * o k > \| -` |
+
+```bash
+aidevix --icons            # current tier + sample glyphs
+aidevix --icons ascii      # force ASCII (persisted)
+aidevix --icons auto       # drop the cache and re-detect
+export AIDEVIX_ICONS=nerd  # for one session (overrides the saved choice)
+```
 
 ### Commands
 
@@ -256,6 +328,8 @@ agent's details (status, command, install method) appear live.
 | `aidevix --doctor` | Checks the environment (tools, PATH, agent status) |
 | `aidevix --add` | Adds a new agent interactively |
 | `aidevix --stats [on\|off]` | 📊 Global usage stats (**opt-in**, off by default). When on, the menu shows `🔥 #rank`; only the agent name + event type are sent (no personal data) |
+| `aidevix --lang [uz\|en]` | Sets the interface language (no argument — interactive picker) |
+| `aidevix --icons [nerd\|unicode\|ascii\|auto]` | 🎨 Icon style. No argument — shows the current tier and sample glyphs; `auto` drops the cache and re-detects |
 | `aidevix --version` | Shows the Aidevix CLI version |
 | `aidevix --help` | Prints help |
 
@@ -327,6 +401,8 @@ NAME | BINARY | COMMAND | INSTALL | DESCRIPTION | CATEGORY | AUTH | URL
 > | `AI_NO_ANIM=1` | Disable animations (spinner/banner) |
 > | `NO_COLOR=1` | Disable colors entirely |
 > | `AIDEVIX_LANG` | Interface language: `uz` or `en` (auto-detected from `LANG`/locale if unset) |
+> | `AIDEVIX_ICONS` | Icon tier: `nerd`, `unicode`, `ascii` or `auto`. Overrides both auto-detection and the saved `--icons` choice |
+> | `AIDEVIX_FZF_PREVIEW=1` | Force the fzf right-hand preview on (off by default on Windows) |
 > | `AIDEVIX_NO_AUTOUPDATE=1` | Disable auto-update |
 > | `AIDEVIX_UPDATE_INTERVAL` | Update-check interval (seconds, default 10800 = 3h) |
 

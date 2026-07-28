@@ -7,6 +7,129 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.8.0] — 2026-07-27
+
+Butun interfeys qayta ishlangan: endi u **yagona dizayn tizimidan** chiziladi.
+
+### Qo'shildi
+- **🎨 `lib/ui.sh` — dizayn tizimi.** Butun interfeysning yagona manbai:
+  - **Ikonkalar uch pog'onada** — `nerd` · `unicode` · `ascii`. `ui_icons_detect`
+    o'zi aniqlaydi (fontconfig · macOS shrift papkalari · Windows reyestri),
+    natija keshlanadi. UTF-8 bo'lmagan muhitda (`LANG=C`) avtomatik `ascii`.
+  - **Semantik ranglar** — `UI_OK/WARN/ERR/INFO/AI/MUTED/FAINT/TEXT/BRAND`,
+    terminalga qarab 256 → 16 → rangsiz pog'onasiga tushadi. `NO_COLOR`
+    hurmat qilinadi.
+  - **Maket yordamchilari** — `ui_vislen/pad/trunc` (ANSI'ni hisobga oladi),
+    `ui_rule`, `ui_kv`, `ui_badge`, `ui_notice`, `ui_header`, `ui_footer`,
+    `ui_statusbar`, `ui_bar`. Har birining fork'siz `_v` varianti bor.
+- **📐 Ikki ustunli menyu.** Chapda qidiriladigan ro'yxat, o'ngda tanlangan
+  agent tafsiloti, pastda status bar va klavish footer'i. **fzf preview ham
+  AYNAN shu `detail_lines()` dan chiziladi** — ikkala interfeys bir xil
+  ko'rinadi (ilgari ular ikki alohida maket edi va bir-biridan uzoqlashgandi).
+- **📱 Ustma-ust (stacked) zaxira maket** — terminal 84 ustundan tor bo'lsa
+  avtomatik yoqiladi.
+- **📊 Status bar** — provayder, model va API-kalit holati (muhit
+  o'zgaruvchilaridan), o'rnatilgan/jami, versiya va tarmoq latency'si.
+  **Kontekst/token sarfi ATAYLAB yo'q:** Aidevix LLM API'ga murojaat qilmaydi,
+  ya'ni uni o'lchay olmaydi — to'qib chiqarilgan raqamdan ko'ra yo'qligi to'g'ri.
+- **`aidevix --icons [nerd|unicode|ascii|auto]`** (qisqasi `-i`) — ikonka
+  uslubini ko'rsatadi yoki majburlaydi; `auto` keshni tashlab qayta aniqlaydi.
+  Tanlov saqlanadi. Muhit o'zgaruvchisi: **`AIDEVIX_ICONS`** (undan ustun).
+- **Test seam `AIDEVIX_UI_DUMP=1`** — menyuning BITTA kadrini stdout'ga chizadi,
+  TTY talab qilmaydi. Maket testlari shu orqali yoziladi
+  (`AIDEVIX_UI_DUMP_QUERY` bilan qidiruv holati ham).
+- 40 ga yaqin yangi test: `tests/ui_design.bats` va `tests/ui_layout.bats`.
+
+### O'zgardi
+- **Emoji interfeysdan CHIQARILDI, ma'nosi esa saqlandi.** Config va tarjima
+  kalitlarida emoji ATAYLAB qoladi (foydalanuvchi configlari bilan moslik
+  uchun), lekin ekranga chiqmaydi: `classify_auth_v` 🆓/🌐/🔑/💳 ni
+  `free|browser|key|paid|none` sinfiga, `detect_provider_v` esa provayderga
+  aylantiradi; `ui_deemoji_v` matndan belgini oladi. Ma'no endi ikonka
+  pog'onasi orqali beriladi.
+- **`build_rows` STATUS ustuni — mashina o'qiydigan token** (`installed` /
+  `missing`). Ilgari u `"✓ o'rnatilgan"` edi: belgi, rang va tarjima bitta
+  satrda aralashib, ustun tekislashini buzardi. Belgiga aylantirish endi
+  faqat chizish paytida bo'ladi. `parse_agents` 10, `build_rows` 11 maydon.
+- fzf menyusi ichki menyu bilan **bir xil semantik palitradan** foydalanadi
+  (ilgari feruza/pushti gradient bor edi — bitta mahsulot ikki xil tuyulardi).
+- `lib/common.sh` dagi `panel()` endi `ui_notice()` ustidagi yupqa qobiq.
+
+### Tuzatildi
+- **Testlar YIQILGANDA ham "ok" deb ko'rsatilardi.** `tests/test_helper.bash`
+  dagi `load_selector`/`load_common` bats'ning ERR/EXIT tutqichlarini
+  `trap -` bilan olib tashlardi — bats yiqilishni umuman ko'rmay qolardi va
+  butun to'plam SOXTA YASHIL edi. Endi tutqichlar source'dan oldin saqlanib,
+  keyin qayta tiklanadi (`_save_bats_traps`/`_restore_bats_traps`).
+- **Tor terminalda footer o'ralib ketardi.** `ui_footer_str_v` endi status bar
+  kabi sig'magan juftlarni tashlaydi (`ui_width` 40 ustunda pol qo'yadi, footer
+  esa o'sha yerda 44 belgi bo'lardi).
+- **Past terminalda yolg'iz bo'lim sarlavhasi qolardi** — "o'rnatish" sarlavhasi
+  ko'rinib, buyrug'ining o'zi kesilib ketardi. `detail_clip` uni olib tashlaydi.
+- **Emoji olib tashlangan izohlarda ortiqcha bo'shliq qolardi** (`│  Anthropic…`
+  ikki bo'shliq bilan). `parse_agents` endi de-emoji'dan keyin `trim_v` qiladi.
+- macOS'da Nerd Font aniqlash `ls | grep` orqali edi (ikki fork + g'alati
+  nomli fayllarda yanglishish) — endi sof glob.
+
+### Ishlab chiqish
+- `make lint` va `make syntax` endi `lib/ui.sh`, `lib/i18n.sh`, `lib/i18n/en.sh`
+  ni ham tekshiradi (ilgari yangi dizayn tizimi umuman lint qilinmasdi). CI ham.
+
+## [1.7.4] — 2026-07-26
+
+### Tuzatildi
+- **Ctrl+C (SIGINT) endi toza to'xtatadi** — terminal buzuq holatda qolmaydi
+  (alt-screen, kursor va termios tiklanadi).
+
+## [1.7.3] — 2026-07-25
+
+### Tuzatildi
+- npm orqali agent o'rnatishda menyu qotib qolib, jim yopilishi tuzatildi.
+
+## [1.7.2] — 2026-07-14
+
+### Tuzatildi
+- Menyu scroll'i va qayta-o'rnatish (reinstall) aylanasi tuzatildi:
+  `locate_binary` PATH'da ko'rinmagan binarni ma'lum joylardan topadi va
+  keshlaydi.
+- Strelka bosilganda "Bekor qilindi" chiqishi — o'lik konsollar uchun
+  timeout'larning uchinchi qatlami qo'shildi.
+
+## [1.7.1] — 2026-06-22
+
+### Tuzatildi
+- `--list` HOLAT ustuni emoji bo'lganda ham tekis tekislanadi.
+- Windows'da strelkalar bilan navigatsiya menyuni yopib qo'ymaydi.
+
+## [1.7.0] — 2026-06-21
+
+### Qo'shildi
+- Kutilmagan xatoda **KATTA yangilash eslatmasi** (`crash`) — crashlarning
+  aksariyati eski versiyada bo'lgani uchun xatodan keyin yangilash buyrug'i
+  ko'zga tashlanadigan panelda ko'rsatiladi.
+- npm o'rnatishlari uchun **interaktiv auto-update** — yangi versiya bo'lsa
+  so'raydi va tasdiqlansa o'zini yangilab qayta ishga tushadi.
+
+## [1.6.0] — 2026-06-19
+
+### Qo'shildi
+- **O'rnatilgan agentlarni avtomatik yangilash** (`maybe_autoupdate_agent`) —
+  ishga tushirishdan oldin, throttled (std 3 soat). Eski Gemini CLI
+  "client no longer supported" muammosini hal qiladi.
+- O'rnatish xatosida **sertifikat/tizim soati** muammosini aniq tushuntirish.
+
+## [1.5.1] — 2026-06-18
+
+### Tuzatildi
+- fzf'siz ↑/↓ menyuda ERR-trap crash'i.
+
+## [1.5.0] — 2026-06-16
+
+### Qo'shildi
+- **fzf'siz ichki ↑/↓ ko'rsatkichli menyu** (built-in TUI) — alt-screen va
+  alternate-scroll bilan; sichqoncha g'ildiragi ham ishlaydi.
+- `--top` reyting va menyuda to'liq agent tafsiloti.
+
 ## [1.4.1] — 2026-06-16
 
 ### O'zgardi

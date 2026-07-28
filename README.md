@@ -299,33 +299,81 @@ aidevix
 ```
 
 ```text
-     █████╗ ██████╗
-    ██╔══██╗██╔══██╗
-    ███████║██║  ██║
-    ██╔══██║██║  ██║
-    ██║  ██║██████╔╝
-    ╚═╝  ╚═╝╚═════╝
+  ◆ Aidevix
+  ────────────────────────────────────────────────────────────────────────────────────────
+  › qidirish   1/28
 
-  ✦  Aidevix CLI
-  barcha AI agentlar — bitta pultda
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-╭─ ✦ Aidevix CLI ────────────────────────────────────────────╮
-│                                          ╭── tafsilot ────╮ │
-│ ▶ ✓  Claude Code     🧠 Claude CLI       │ Claude Code    │ │
-│   ✓  Aider           🤝 pair programming │ ───────────    │ │
-│   ✗  Gemini CLI      ✨ Gemini agenti    │ ● o'rnatilgan  │ │
-│   ✗  GitHub Copilot  🐙 Copilot CLI      │ Binar: claude  │ │
-│   ...                                    ╰────────────────╯ │
-│   ↑/↓ tanlang · yozib qidiring · ENTER · ESC               │
-╰────────────────────────────────────────────────────────────╯
+  ▸ ● Claude Code                        │ Claude Code  ● o'rnatilgan
+    ● OpenAI Codex                       │
+    ● Gemini CLI                         │ Anthropic'ning rasmiy Claude kod agenti
+    ○ GitHub Copilot                     │
+    ● OpenCode                           │ buyruq    claude
+    ○ Qwen Code                          │ guruh     Coding
+    ○ Cursor Agent                       │ provayder anthropic
+    ● Freebuff                           │ login     ▪ API kalit
+    ○ Codebuff                           │ havola    https://console.anthropic.com/set…
+    ○ Aider                              │
+    ○ Crush                              │ o'rnatish
+    ○ Continue                           │ npm install -g @anthropic-ai/claude-code@lat…
+    ○ Plandex                            │
+  ────────────────────────────────────────────────────────────────────────────────────────
+  ◆ anthropic │ — │ ○ kalit yo'q │ 7/28 o'rnatilgan │ v1.8.0 ● eng so'nggi
+  ↑↓ harakat   ⏎ ishga tushirish   a-z qidirish   esc chiqish
 ```
 
-Yozib qidiring → `↑/↓` bilan tanlang → `ENTER`. O'ng tomonda tanlangan
-agentning tafsiloti (holati, buyrug'i, o'rnatish usuli) jonli ko'rinadi.
+Yozib qidiring → `↑/↓` bilan tanlang → `ENTER`. **O'ng ustunda** tanlangan
+agentning tafsiloti (holati, buyrug'i, provayderi, login talabi, o'rnatish
+usuli) jonli ko'rinadi. Pastdagi **status bar** — provayder, model, API-kalit
+holati, o'rnatilgan/jami va versiya.
 
-> 💡 `fzf` yo'q bo'lsa, xuddi shu narsa oddiy **raqamli menyu** sifatida chiqadi —
-> hech narsa yo'qolmaydi.
+> 💡 `fzf` yo'q bo'lsa, xuddi shu narsa ichki `↑/↓` menyusida chiqadi; terminal
+> umuman bo'lmasa — **raqamli menyu**. Hech narsa yo'qolmaydi.
+
+### 📐 Tor terminal — avtomatik ustma-ust maket
+
+Terminal **84 ustundan tor** bo'lsa ikki ustun avtomatik ustma-ust (stacked)
+maketga o'tadi — ro'yxat tepada, tafsilot pastda:
+
+```text
+  ◆ Aidevix
+  ────────────────────────────────────────────────────────────────────
+  › qidirish   1/28
+
+  ▸ ●  Claude Code         Anthropic'ning rasm…
+    ●  OpenAI Codex        OpenAI Codex termi…
+    ●  Gemini CLI          Google Gemini term…
+    ○  GitHub Copilot      GitHub Copilot CLI…
+    ●  OpenCode            Ochiq kodli termin…
+  ────────────────────────────────────────────────────────────────────
+  Claude Code  ● o'rnatilgan
+
+  Anthropic'ning rasmiy Claude kod agenti
+
+  buyruq    claude
+  guruh     Coding
+  provayder anthropic
+  ────────────────────────────────────────────────────────────────────
+  ◆ anthropic │ — │ ○ kalit yo'q │ 7/28 o'rnatilgan │ v1.8.0 ● eng so'nggi
+  ↑↓ harakat   ⏎ ishga tushirish   a-z qidirish   esc chiqish
+```
+
+### 🎨 Ikonka uslublari (`--icons`)
+
+Interfeys belgilari **uch pog'onada** keladi va Aidevix uni o'zi aniqlaydi
+(Nerd Font o'rnatilganmi · terminal UTF-8'mi):
+
+| Pog'ona | Qachon | Namuna |
+|---|---|---|
+| `nerd` | Nerd Font shrifti topilsa |    |
+| `unicode` | Odatiy UTF-8 terminal (standart) | `◆ ● ○ ▪ ▸ │ ─` |
+| `ascii` | `LANG=C`, UTF-8 yo'q yoki eski konsol | `# * o k > \| -` |
+
+```bash
+aidevix --icons            # joriy uslub + namuna belgilar
+aidevix --icons ascii      # majburan ASCII (saqlanadi)
+aidevix --icons auto       # keshni tashlab, qaytadan aniqlaydi
+export AIDEVIX_ICONS=nerd  # bir sessiya uchun (saqlangan tanlovdan ustun)
+```
 
 ### 🪄 O'rnatishda jonli animatsiya
 
@@ -364,6 +412,8 @@ o'rnatishni taklif qiladi:
 | `aidevix --doctor` | Muhitni tekshiradi (vositalar, PATH, agentlar holati) |
 | `aidevix --add` | Interaktiv tarzda yangi agent qo'shadi |
 | `aidevix --stats [on\|off]` | 📊 Global statistika (**opt-in**, standart o'chiq). Yoqilganda menyuda `🔥 #reyting` ko'rinadi; faqat agent nomi + hodisa turi yuboriladi (shaxsiy ma'lumotsiz) |
+| `aidevix --lang [uz\|en]` | Interfeys tilini tanlaydi (argumentsiz — interaktiv tanlov) |
+| `aidevix --icons [nerd\|unicode\|ascii\|auto]` | 🎨 Ikonka uslubi. Argumentsiz — joriy uslub va namuna belgilar; `auto` — keshni tashlab qaytadan aniqlaydi |
 | `aidevix --version` | Aidevix CLI versiyasini ko'rsatadi |
 | `aidevix --help` | Yordam matnini chiqaradi |
 
@@ -458,6 +508,8 @@ Saqlang — keyingi `aidevix` ishga tushishida agent menyuda paydo bo'ladi. 🎉
 > | `AI_NO_ANIM=1` | Animatsiyalarni o'chirish (spinner/banner) |
 > | `NO_COLOR=1` | Ranglarni butunlay o'chirish |
 > | `AIDEVIX_LANG` | Interfeys tili: `uz` yoki `en` (berilmasa `LANG`/locale'dan aniqlanadi) |
+> | `AIDEVIX_ICONS` | Ikonka uslubi: `nerd`, `unicode`, `ascii` yoki `auto`. Avtomatik aniqlash va saqlangan tanlovdan (`--icons`) USTUN turadi |
+> | `AIDEVIX_FZF_PREVIEW=1` | fzf menyusida o'ng preview'ni majburan yoqadi (Windows'da standart o'chiq) |
 > | `AIDEVIX_NO_AUTOUPDATE=1` | Avtomatik yangilanishni o'chirish |
 > | `AIDEVIX_UPDATE_INTERVAL` | Yangilanish tekshiruvi oralig'i (sekund, standart 10800 = 3 soat) |
 

@@ -49,19 +49,38 @@ setup() {
 }
 
 # --- build_menu tartibi (eng ko'p ishlatilgan tepada) ----------------------
-@test "build_menu: ko'p ishlatilgan agent yuqorida turadi" {
+@test "build_menu: ko'p ishlatilgan agent O'Z GURUHIDA yuqorida turadi" {
+  # ESLATMA: saralashda O'RNATILGANLIK sanoqdan USTUN turadi (o'rnatilganlar
+  # doim tepada). Fixture'da faqat "Alpha CLI" o'rnatilgan, shuning uchun
+  # sanoqning ta'sirini O'RNATILMAGANLAR guruhi ichida tekshiramiz.
   export AI_PULT_CONFIG="$FIXTURE_CONFIG"
   record_usage "Charlie"
   record_usage "NoInstall"
-  record_usage "NoInstall"   # NoInstall = 2 → eng tepada
+  record_usage "NoInstall"   # NoInstall = 2 → o'rnatilmaganlar ichida tepada
   local rows; rows="$(build_rows "$FIXTURE_CONFIG")"
   run build_menu "$rows" "$STATS_FILE"
   [ "$status" -eq 0 ]
-  # Birinchi qatorning yashirin NAME maydoni (TAB'dan keyin) NoInstall bo'lsin.
+  # O'rnatilgan Alpha CLI — eng tepada.
   local first; first="$(printf '%s\n' "$output" | head -1)"
-  [[ "$first" == *"NoInstall"* ]]
-  # Sanoq belgisi "·2×" ko'rinishi kerak.
-  [[ "$first" == *"2×"* ]]
+  [[ "$first" == *"Alpha CLI"* ]]
+  # O'rnatilmaganlar ichida NoInstall (2×) Charlie (1×) dan tepada.
+  local pos_ni pos_ch
+  pos_ni="$(printf '%s\n' "$output" | grep -n 'NoInstall' | head -1 | cut -d: -f1)"
+  pos_ch="$(printf '%s\n' "$output" | grep -n 'Charlie'   | head -1 | cut -d: -f1)"
+  [ "$pos_ni" -lt "$pos_ch" ]
+  # Sanoq belgisi "2×" ko'rinishi kerak.
+  [[ "$(printf '%s\n' "$output" | grep 'NoInstall')" == *"2×"* ]]
+}
+
+@test "build_menu: O'RNATILGAN agentlar o'rnatilmaganlardan TEPADA" {
+  # Foydalanuvchi darhol ishlata oladigan agentni qidirib o'tirmasligi kerak.
+  export AI_PULT_CONFIG="$FIXTURE_CONFIG"
+  local rows; rows="$(build_rows "$FIXTURE_CONFIG")"
+  run build_menu "$rows" "$STATS_FILE"
+  [ "$status" -eq 0 ]
+  # Fixture'da yagona o'rnatilgan agent — "Alpha CLI" (binari `bash`).
+  local first; first="$(printf '%s\n' "$output" | head -1)"
+  [[ "$first" == *"Alpha CLI"* ]]
 }
 
 @test "build_menu: oxirgi ishlatilgan agent hammadan tepada ('oxirgi' belgisi bilan)" {

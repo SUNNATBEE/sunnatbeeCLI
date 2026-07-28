@@ -265,3 +265,58 @@ SH
   ui_vislen_v vis "$out"
   [ "$vis" -eq 20 ]
 }
+
+# --- Banner animatsiyasi --------------------------------------------------
+
+@test "ui_anim_wait: skriptni TO'XTATIB QO'YMAYDI (regressiya)" {
+  # Bug: fork'siz kutish uchun `exec {fd}<> <(:)` ishlatilgan edi. MSYS'da
+  # redirect xato berardi, noninteraktiv bash esa `exec` redirecti barbod
+  # bo'lsa BUTUN SKRIPTNI to'xtatadi — banner birinchi qatordan keyin jim
+  # uzilardi va `|| zaxira` ham ishlamasdi.
+  run bash -c ". '$COMMON'; ui_anim_wait 0.01; ui_anim_wait 0.01; \
+                ui_anim_wait 0.01; echo SURVIVED"
+  [ "$status" -eq 0 ]
+  [ "$output" = "SURVIVED" ]
+}
+
+@test "ui_anim_wait: kasr sonni ko'tarmaydigan sleep'da kutishni O'TKAZADI" {
+  # Ba'zi minimal `sleep` (busybox) kasr sonni tushunmaydi va "0.055" ni
+  # 0 yoki xato deb qabul qiladi. Bunday muhitda BUTUN kutishni o'tkazib
+  # yuborish kerak — aks holda har kadr 1 soniya bo'lib, banner 6 soniyaga
+  # cho'zilardi. Probe'ni "qo'llab-quvvatlamaydi" ga majburlab tekshiramiz.
+  run bash -c ". '$COMMON'
+    sleep() { [[ \$1 == *.* ]] && return 1; command sleep \"\$1\"; }
+    ui_anim_wait 0.055
+    echo \"cap=\$UI_ANIM_SLEEP rc=\$?\""
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"cap=0"* ]]
+}
+
+@test "ui_anim_wait: kasrni ko'taradigan sleep'da qobiliyat aniqlanadi" {
+  run bash -c ". '$COMMON'; ui_anim_wait 0.01; echo \"cap=\$UI_ANIM_SLEEP\""
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"cap=1"* ]] || [[ "$output" == *"cap=0"* ]]
+}
+
+@test "ui_gradient_line: 256-rangli kodlar bilan chizadi, MATN o'zgarmaydi" {
+  UI_COLS=80
+  run bash -c "FORCE_COLOR=1 TERM=xterm-256color . '$COMMON'; UI_FD=1 ui_gradient_line 'ABC' 0"
+  [ "$status" -eq 0 ]
+  # Gradient — 256-rangli ANSI kodlari bo'lishi shart.
+  [[ "$output" == *$'\033[1;38;5;'* ]]
+  # Ko'rinadigan matn saqlanadi.
+  local plain; plain="$(printf '%s' "$output" | sed 's/\x1b\[[0-9;]*m//g')"
+  [ "$plain" = "ABC" ]
+}
+
+@test "ui_gradient_line: bo'sh joyga rang bermaydi (ANSI shovqini kam)" {
+  run bash -c "FORCE_COLOR=1 TERM=xterm-256color . '$COMMON'; UI_FD=1 ui_gradient_line 'A B' 0"
+  local plain; plain="$(printf '%s' "$output" | sed 's/\x1b\[[0-9;]*m//g')"
+  [ "$plain" = "A B" ]
+}
+
+@test "banner: animatsiya CI/NO_COLOR/TTY'siz holatda O'CHIQ" {
+  # Animatsiya faqat jonli 256-rangli terminalda; aks holda logo darhol chiqadi.
+  run bash -c "CI=1 FORCE_COLOR=1 TERM=xterm-256color . '$COMMON'; echo \"anim=\$AI_ANIM\""
+  [[ "$output" == *"anim=0"* ]]
+}

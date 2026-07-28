@@ -1413,12 +1413,19 @@ build_menu() {
 
       disp = sprintf("%s  %s%s%-18s%s %s%s%s%s",
                      icon, b, c_text, name, z, c_muted, clip(desc, descw), z, meta);
-      # Tartiblash kalitlari: 1) oxirgi ishlatilgan (eng tepada), 2) lokal sanoq
-      # (kamayish), 3) top/mashhurlik (kamayish — yangi foydalanuvchida ham
-      # mashhurlar tepada), 4) config indeksi (barqaror).
-      printf "%d\t%010d\t%d\t%06d\t%s\t%s\n", islast, c, istop, (++idx), disp, name
+      # Tartiblash kalitlari:
+      #   1) oxirgi ishlatilgan (eng tepada — bitta ENTER bilan qayta ochish)
+      #   2) O`RNATILGAN (o`rnatilganlar HAR DOIM o`rnatilmaganlardan tepada —
+      #      darhol ishlatib boladigan agentni qidirib otirmaslik uchun)
+      #   3) lokal sanoq (kamayish)
+      #   4) top/mashhurlik (kamayish — yangi foydalanuvchida ham mashhurlar tepada)
+      #   5) config indeksi (barqaror tartib)
+      inst = (status == "installed") ? 1 : 0;
+      printf "%d\t%d\t%010d\t%d\t%06d\t%s\t%s\n",
+             islast, inst, c, istop, (++idx), disp, name
     }
-  ' <<<"$rows" | sort -t"$(printf '\t')" -k1,1nr -k2,2nr -k3,3nr -k4,4n | cut -f5-
+  ' <<<"$rows" \
+    | sort -t"$(printf '\t')" -k1,1nr -k2,2nr -k3,3nr -k4,4nr -k5,5n | cut -f6-
 }
 
 # --- fzf orqali tanlash ---------------------------------------------------

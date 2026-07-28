@@ -514,6 +514,54 @@ ui_statusbar() {
 UI_SPIN_FRAMES='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
 UI_SPIN_ASCII='|/-\'
 
+# --- Animatsiya yordamchilari (banner uchun) -------------------------------
+#
+# ui_anim_wait <sekund> — animatsiya kadrlari orasidagi qisqa kutish.
+#
+# NEGA `sleep` (ya'ni FORK), loyihaning "tsiklda fork ISHLATMA" qoidasiga
+# qaramay? Chunki bu tsikl KLAVISH tsikli emas: banner butun o'rnatish
+# davomida BIR MARTA (ilk ishga tushishda) chiziladi va bor-yo'g'i 6 kadr.
+# MSYS'da bu ~0.8 s, Linux/macOS'da ~0.35 s — talab qilingan 2 s ichida.
+#
+# `read -t` builtin'i bilan fork'siz variant SINALDI va RAD ETILDI:
+# `exec {fd}<> <(:)` MSYS'da redirect xatosi berardi, noninteraktiv bash esa
+# `exec` redirecti muvaffaqiyatsiz bo'lsa BUTUN SKRIPTNI to'xtatadi — ya'ni
+# `|| zaxira` ham ishlamasdi (banner birinchi qatordan keyin jim uzilardi).
+#
+# Kasr sonni ko'tarmaydigan minimal `sleep` (masalan ba'zi busybox) bo'lsa —
+# kutishni UMUMAN o'tkazib yuboramiz (1 soniya kutib qolmaslik uchun).
+UI_ANIM_SLEEP=""
+ui_anim_wait() {
+  if [[ -z "$UI_ANIM_SLEEP" ]]; then
+    if command -v sleep >/dev/null 2>&1 && sleep 0.01 2>/dev/null; then
+      UI_ANIM_SLEEP=1
+    else
+      UI_ANIM_SLEEP=0
+    fi
+  fi
+  [[ "$UI_ANIM_SLEEP" == "1" ]] || return 0
+  sleep "$1" 2>/dev/null || true
+}
+
+# UI_GRAD — brend gradienti: moviy (cyan) → siyoh (magenta) → ko'k (blue).
+# 256-rangli palitradan tanlangan; faqat UI_DEPTH=256 bo'lganda ishlatiladi.
+UI_GRAD=(51 45 39 75 111 147 183 201 165 129 93 57 33)
+
+# ui_gradient_line <satr> <qator-indeksi> — satrni gradient bilan chizadi.
+# Rang USTUN bo'yicha o'zgaradi, qator indeksi esa boshlanish nuqtasini
+# suradi — shunda logo bo'ylab diagonal "oqim" hosil bo'ladi.
+# Sof bash: satr avval o'zgaruvchiga yig'iladi, keyin BIR marta chop etiladi.
+ui_gradient_line() {
+  local __line="$1" __row="${2:-0}" __n=${#UI_GRAD[@]} __out='' __k __ch __c
+  for (( __k = 0; __k < ${#__line}; __k++ )); do
+    __ch="${__line:__k:1}"
+    if [[ "$__ch" == ' ' ]]; then __out+=' '; continue; fi
+    __c=${UI_GRAD[$(( (__k + __row * 2) % __n ))]}
+    __out+=$'\033[1;38;5;'"${__c}"'m'"$__ch"
+  done
+  printf '%s%s\n' "$__out" "$UI_R" >&"$UI_FD"
+}
+
 # ui_frames — joriy pog'onaga mos spinner ramkalarini qaytaradi.
 ui_frames() {
   if [[ "${UI_ICON_TIER:-unicode}" == "ascii" || "${UI_UTF8:-1}" -ne 1 ]]; then

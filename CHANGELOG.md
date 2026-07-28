@@ -7,6 +7,16 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+### Qo'shildi
+- **Banner animatsiyasi qaytdi** — logo qatorma-qator ochiladi va gradient
+  bilan (moviy → siyoh → ko'k) chiziladi. Butun effekt ~0.35 s (Windows'da
+  ~0.8 s). FAQAT jonli 256-rangli terminalda; `CI`, `AI_NO_ANIM`, `NO_COLOR`,
+  quvur va 16-rangli terminalda logo AVVALGIDEK bir zumda chiqadi.
+  Yangi: `ui_gradient_line`, `ui_anim_wait` (lib/ui.sh), `hide_cursor`.
+- **Menyu tartibi: O'RNATILGAN agentlar endi TEPADA.** Saralash kalitlari:
+  oxirgi ishlatilgan → o'rnatilgan → lokal sanoq → top → config tartibi.
+  Foydalanuvchi darhol ishlata oladigan agentni ro'yxatdan qidirmaydi.
+
 ### Tuzatildi
 - **Ikki ustunli menyu va status bar ko'pchilikka UMUMAN ko'rinmasdi.** `run_menu`
   fzf o'rnatilgan bo'lsa darrov fzf'ni tanlardi, redizaynning butun maketi esa

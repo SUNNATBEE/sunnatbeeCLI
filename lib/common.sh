@@ -170,6 +170,9 @@ tool_hint() {
 
 # show_cursor — kursorni qaytaradi (spinner yoki Ctrl+C'dan keyin).
 show_cursor() { [[ "${UI_TTY:-0}" -eq 1 ]] && printf '\033[?25h' >&2 || true; }
+# hide_cursor — animatsiya paytida kursor "sakramasligi" uchun. Juftligi
+# show_cursor; chiqish yo'llarida (cleanup/trap) u baribir tiklanadi.
+hide_cursor() { [[ "${UI_TTY:-0}" -eq 1 ]] && printf '\033[?25l' >&2 || true; }
 
 # open_url <url> — havolani standart brauzerda ochadi (platformaga qarab).
 #   Eng yaxshi-harakat: xato bo'lsa ham jim qaytadi (havola baribir chop etiladi).
@@ -216,9 +219,11 @@ banner_full() {
     return 0
   fi
   printf '\n' >&2
-  # Monogramma — endi gradientsiz va animatsiyasiz: bitta brend rangi.
-  # Harfma-harf "yozilish" effekti olib tashlandi (ishga tushishni sekinlashtirardi
-  # va professional CLI'larda uchramaydi).
+  # Monogramma. Animatsiya (qatorma-qator ochilish + gradient) FAQAT jonli
+  # terminalda va AI_ANIM=1 bo'lganda ishlaydi — ya'ni CI, quvur, NO_COLOR va
+  # AI_NO_ANIM holatlarida logo BIR ZUMDA, avvalgidek chiziladi.
+  # Tezlik: butun effekt ~0.35 s (6 qator × 55 ms) va tsiklda FORK YO'Q —
+  # kutish `read -t` builtin'i bilan (qarang ui_anim_wait).
   if [[ "${UI_UTF8:-1}" -eq 1 ]]; then
     local -a logo=(
 '   █████╗ ██████╗ '
@@ -228,10 +233,20 @@ banner_full() {
 '  ██║  ██║██████╔╝'
 '  ╚═╝  ╚═╝╚═════╝ '
     )
-    local row
-    for row in "${logo[@]}"; do
-      printf '%s%s%s%s\n' "$UI_B" "$UI_BRAND" "$row" "$UI_R" >&2
-    done
+    local row i=0
+    if [[ "${AI_ANIM:-0}" -eq 1 && "${UI_DEPTH:-0}" == "256" ]]; then
+      hide_cursor
+      for row in "${logo[@]}"; do
+        ui_gradient_line "$row" "$i"
+        i=$(( i + 1 ))
+        ui_anim_wait 0.055
+      done
+      show_cursor
+    else
+      for row in "${logo[@]}"; do
+        printf '%s%s%s%s\n' "$UI_B" "$UI_BRAND" "$row" "$UI_R" >&2
+      done
+    fi
   else
     printf '%s   /\  ___ %s\n' "$UI_BRAND" "$UI_R" >&2
     printf '%s  /__\ |  |%s\n' "$UI_BRAND" "$UI_R" >&2

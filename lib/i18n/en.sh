@@ -91,6 +91,7 @@ MSG_EN["fzf kutilmagan kod bilan to'xtadi: %s"]="fzf exited with an unexpected c
 MSG_EN["Hech narsa tanlanmadi."]="Nothing selected."
 MSG_EN["Menyu uchun agent topilmadi."]="No agents found for the menu."
 MSG_EN["fzf topilmadi — oddiy menyu ishlatilmoqda (yaxshiroq tajriba uchun fzf o'rnating)."]="fzf not found — using the simple menu (install fzf for a better experience)."
+MSG_EN["Interaktiv menyu ishlamadi — oddiy raqamli menyu ko'rsatilmoqda."]="The interactive menu is unavailable — showing the plain numbered menu."
 MSG_EN["AI CLI tanlang:"]="Choose an AI CLI:"
 MSG_EN["Raqam kiriting (1-%s, ESC=bekor) › "]="Enter a number (1-%s, ESC=cancel) › "
 MSG_EN["Noto'g'ri tanlov: '%s'."]="Invalid choice: '%s'."
@@ -281,6 +282,7 @@ MSG_EN["🔑 provayder API kaliti (OpenAI/lokal)"]="🔑 provider API key (OpenA
 # --- menyu (fzf fallback / oxirgi agent belgisi) ---------------------------
 MSG_EN["fzf ishga tushmadi — ichki menyu ishlatilmoqda."]="fzf failed to start — using the built-in menu."
 MSG_EN["Interaktiv menyu ochilmadi — raqamli menyuga o'tildi."]="Could not open the interactive menu — falling back to the numbered menu."
+MSG_EN["Interaktiv menyu ochilmadi — fzf ishlatilmoqda."]="Could not open the interactive menu — using fzf instead."
 MSG_EN["oxirgi"]="last"
 MSG_EN["q yoki 2×ESC = bekor · Enter = tanlash"]="q or ESC twice = cancel · Enter = select"
 

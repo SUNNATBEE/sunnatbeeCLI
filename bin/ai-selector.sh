@@ -259,9 +259,10 @@ USAGE:
 
 OPTIONS:
   (no argument)   Open the interactive menu: a two-column browser with the
-                  agent list on the left and details on the right (fzf when
-                  available, otherwise the built-in arrow menu; a numbered
-                  menu as a last resort when there is no terminal)
+                  agent list on the left, details on the right, and a status
+                  bar at the bottom (a numbered menu as a last resort when
+                  there is no terminal). Set AIDEVIX_USE_FZF=1 to use fzf
+                  instead — note fzf cannot draw the status bar.
   AGENT           Launch an agent directly by name or binary
                   (e.g. `aidevix claude`, `aidevix gemini`)
   -l, --list      List agents and their status
@@ -304,8 +305,9 @@ FOYDALANISH:
 
 TANLOVLAR:
   (argumentsiz)   Interaktiv menyuni ochadi: chapda agentlar ro'yxati, o'ngda
-                  tanlangan agent tafsiloti (fzf bo'lsa fzf; bo'lmasa ichki
-                  ko'rsatkichli menyu; terminal bo'lmasa — raqamli)
+                  tanlangan agent tafsiloti, pastda status bar (terminal
+                  bo'lmasa — raqamli menyu). fzf'ni afzal ko'rsangiz:
+                  AIDEVIX_USE_FZF=1 — lekin fzf status bar chiza olmaydi.
   AGENT           Agentni nomi yoki binari bo'yicha to'g'ridan-to'g'ri ishga tushiradi
                   (masalan: `aidevix claude`, `aidevix gemini`)
   -l, --list      Agentlar ro'yxati va holatini ko'rsatadi
@@ -1491,7 +1493,10 @@ select_with_numbers() {
 
   [[ "${#names[@]}" -gt 0 ]] || die 1 "$(t 'Menyu uchun agent topilmadi.')"
 
-  log_warn "$(t "fzf topilmadi — oddiy menyu ishlatilmoqda (yaxshiroq tajriba uchun fzf o'rnating).")"
+  # ESLATMA: ilgari bu yerda "fzf topilmadi" deyilardi, lekin raqamli menyu
+  # endi fzf yo'qligidan emas — TERMINAL yo'qligidan (quvur/CI) yoki ichki
+  # menyu ochilmaganidan ko'rsatiladi. Xabar shunga moslandi.
+  log_warn "$(t "Interaktiv menyu ishlamadi — oddiy raqamli menyu ko'rsatilmoqda.")"
   local w; w="$(ui_width)"
   ui_header "${UI_MUTED}$(t 'agent tanlang')${UI_R}"
   local i
@@ -2088,7 +2093,20 @@ run_menu() {
   local name="" datafile rc=0
   datafile="$(mktemp)"; TMPFILES+=("$datafile")
   printf '%s\n' "$rows" >"$datafile"
-  if command -v fzf >/dev/null 2>&1; then
+  # --- Qaysi interfeys? -----------------------------------------------------
+  # STANDART — ichki ↑/↓ menyu. Sabab: ikki ustunli maket, status bar va
+  # klavish footer'i FAQAT o'shanda bor. fzf'da pastki qatorni umuman chizib
+  # bo'lmaydi (`--footer` yo'q, faqat `--header`), Windows'da esa preview ham
+  # standart o'chiq (cygwin fork xatolari) — natijada fzf o'rnatilgan
+  # foydalanuvchi TEKIS RO'YXAT ko'rardi va butun redizaynni umuman
+  # ko'rmasdi. fzf'ni afzal ko'rganlar uchun: AIDEVIX_USE_FZF=1.
+  local use_fzf=0
+  if [[ -n "${AIDEVIX_USE_FZF:-}" && -z "${AIDEVIX_NO_FZF:-}" ]] \
+     && command -v fzf >/dev/null 2>&1; then
+    use_fzf=1
+  fi
+
+  if (( use_fzf )); then
     name="$(select_with_fzf "$menu" "$datafile")" || rc=$?
     if [[ "$rc" -eq 3 ]]; then
       # fzf ishga tushmadi (eski versiya / TTY muammosi) — ichki menyuga o'tamiz.
@@ -2107,16 +2125,28 @@ run_menu() {
       exit "$rc"
     fi
   elif { : >/dev/tty; } 2>/dev/null; then
-    # fzf yo'q, lekin TTY bor — ichki ↑/↓ menyu (to'liq ma'lumotli).
+    # TTY bor — ichki ↑/↓ menyu (ikki ustun + status bar + footer).
     name="$(select_with_arrows "$menu" "$datafile")" || rc=$?
     if (( rc == 2 )); then
-      log_warn "$(t "Interaktiv menyu ochilmadi — raqamli menyuga o'tildi.")"
-      rc=0; name="$(select_with_numbers "$menu")"
+      # Ichki menyu ochilmadi. fzf bo'lsa — o'shanga, bo'lmasa raqamli menyuga.
+      rc=0
+      if command -v fzf >/dev/null 2>&1; then
+        log_warn "$(t "Interaktiv menyu ochilmadi — fzf ishlatilmoqda.")"
+        name="$(select_with_fzf "$menu" "$datafile")" || rc=$?
+        if (( rc == 3 )); then
+          rc=0; name="$(select_with_numbers "$menu")"
+        elif (( rc != 0 )); then
+          exit "$rc"
+        fi
+      else
+        log_warn "$(t "Interaktiv menyu ochilmadi — raqamli menyuga o'tildi.")"
+        name="$(select_with_numbers "$menu")"
+      fi
     elif (( rc == 130 )); then
       exit 130                                 # Ctrl+C — menyu o'zi tozalagan
     fi
   else
-    # TTY ham yo'q (quvur/CI) — oddiy raqamli menyu (stdin'dan o'qiydi).
+    # TTY yo'q (quvur/CI) — oddiy raqamli menyu (stdin'dan o'qiydi).
     name="$(select_with_numbers "$menu")"
   fi
 

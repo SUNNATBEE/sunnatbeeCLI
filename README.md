@@ -509,6 +509,7 @@ Saqlang — keyingi `aidevix` ishga tushishida agent menyuda paydo bo'ladi. 🎉
 > | `NO_COLOR=1` | Ranglarni butunlay o'chirish |
 > | `AIDEVIX_LANG` | Interfeys tili: `uz` yoki `en` (berilmasa `LANG`/locale'dan aniqlanadi) |
 > | `AIDEVIX_ICONS` | Ikonka uslubi: `nerd`, `unicode`, `ascii` yoki `auto`. Avtomatik aniqlash va saqlangan tanlovdan (`--icons`) USTUN turadi |
+> | `AIDEVIX_USE_FZF=1` | Menyuni fzf bilan ochadi. **Standart — ichki menyu**, chunki ikki ustunli maket, status bar va footer faqat unda bor (fzf pastki qatorni chiza olmaydi) |
 > | `AIDEVIX_FZF_PREVIEW=1` | fzf menyusida o'ng preview'ni majburan yoqadi (Windows'da standart o'chiq) |
 > | `AIDEVIX_NO_AUTOUPDATE=1` | Avtomatik yangilanishni o'chirish |
 > | `AIDEVIX_UPDATE_INTERVAL` | Yangilanish tekshiruvi oralig'i (sekund, standart 10800 = 3 soat) |

@@ -7,6 +7,17 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+### Tuzatildi
+- **Ikki ustunli menyu va status bar ko'pchilikka UMUMAN ko'rinmasdi.** `run_menu`
+  fzf o'rnatilgan bo'lsa darrov fzf'ni tanlardi, redizaynning butun maketi esa
+  (ikki ustun · status bar · klavish footer'i) faqat ichki `select_with_arrows`
+  da bor edi. Windows'da fzf preview ham standart o'chiq — natijada fzf'li
+  foydalanuvchi TEKIS RO'YXAT ko'rardi. Endi standart — ichki menyu;
+  fzf'ni afzal ko'rganlar uchun `AIDEVIX_USE_FZF=1`. Ichki menyu ochilmasa
+  fzf'ga, u ham bo'lmasa raqamli menyuga zaxira yo'l bor.
+- Raqamli menyudagi "fzf topilmadi" xabari yanglish edi (u endi fzf yo'qligidan
+  emas, TERMINAL yo'qligidan chiqadi) — matn aniqlashtirildi.
+
 ## [1.8.0] — 2026-07-27
 
 Butun interfeys qayta ishlangan: endi u **yagona dizayn tizimidan** chiziladi.

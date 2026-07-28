@@ -402,6 +402,7 @@ NAME | BINARY | COMMAND | INSTALL | DESCRIPTION | CATEGORY | AUTH | URL
 > | `NO_COLOR=1` | Disable colors entirely |
 > | `AIDEVIX_LANG` | Interface language: `uz` or `en` (auto-detected from `LANG`/locale if unset) |
 > | `AIDEVIX_ICONS` | Icon tier: `nerd`, `unicode`, `ascii` or `auto`. Overrides both auto-detection and the saved `--icons` choice |
+> | `AIDEVIX_USE_FZF=1` | Open the menu with fzf. **The built-in menu is the default** — the two-column layout, status bar and footer only exist there (fzf cannot draw a bottom row) |
 > | `AIDEVIX_FZF_PREVIEW=1` | Force the fzf right-hand preview on (off by default on Windows) |
 > | `AIDEVIX_NO_AUTOUPDATE=1` | Disable auto-update |
 > | `AIDEVIX_UPDATE_INTERVAL` | Update-check interval (seconds, default 10800 = 3h) |

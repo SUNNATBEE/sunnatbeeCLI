@@ -234,3 +234,33 @@ body_of() { printf '%s\n' "$1" | head -n -3; }
   trim_v out ""
   [ "$out" = "" ]
 }
+
+# --- Interfeys tanlash (regressiya) ---------------------------------------
+
+@test "run_menu: STANDART interfeys — ichki menyu, fzf emas" {
+  # Bu redizaynning butun ma'nosi: ikki ustunli maket, status bar va footer
+  # FAQAT select_with_arrows da bor. fzf o'rnatilgan bo'lsa ham u STANDART
+  # bo'lib qolmasligi kerak — aks holda foydalanuvchi tekis ro'yxat ko'radi
+  # va redizaynni umuman ko'rmaydi (aynan shunday bo'lgan).
+  local body
+  body="$(awk '/^run_menu\(\) \{/{f=1} f{print} f&&/^\}$/{exit}' "$SELECTOR")"
+  # fzf faqat AIDEVIX_USE_FZF bilan yoqiladi.
+  [[ "$body" == *'AIDEVIX_USE_FZF'* ]]
+  # Asosiy tarmoqlanish `use_fzf` bo'yicha bo'lishi SHART va u birinchi
+  # `select_with_*` chaqiruvidan OLDIN kelishi kerak. (fzf ni ichki menyu
+  # ochilmagan holatda ZAXIRA sifatida chaqirish — bu boshqa narsa, u mumkin.)
+  local gate first
+  gate="$(grep -n 'if (( use_fzf ))' <<<"$body" | head -1 | cut -d: -f1)"
+  first="$(grep -n 'select_with_' <<<"$body" | head -1 | cut -d: -f1)"
+  [ -n "$gate" ]
+  [ -n "$first" ]
+  [ "$gate" -lt "$first" ]
+}
+
+@test "run_menu: fzf ishlamasa ham raqamli menyuga zaxira yo'l bor" {
+  local body
+  body="$(awk '/^run_menu\(\) \{/{f=1} f{print} f&&/^\}$/{exit}' "$SELECTOR")"
+  [[ "$body" == *'select_with_arrows'* ]]
+  [[ "$body" == *'select_with_numbers'* ]]
+  [[ "$body" == *'select_with_fzf'* ]]
+}

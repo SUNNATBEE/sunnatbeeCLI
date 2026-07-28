@@ -77,6 +77,7 @@ o'rnatilmagan bo'lsa — ruxsat so'rab o'rnatadi. Sof **Bash** loyihasi (build y
 | `AIDEVIX_LANG` | Interfeys tili: `uz` yoki `en`. Berilmasa saqlangan tanlov (`--lang`), so'ng `LANG`/`LC_*` locale'idan aniqlanadi; ilk ishga tushishda interaktiv so'raladi. |
 | `AIDEVIX_ICONS` | Ikonka pog'onasi: `nerd`/`unicode`/`ascii`/`auto`. Avtomatik aniqlash va saqlangan tanlovdan (`--icons`) ustun. |
 | `AIDEVIX_UI_DUMP` | `1` — menyuning BITTA kadrini stdout'ga chizib qaytadi (test seam, TTY kerak emas). `AIDEVIX_UI_DUMP_QUERY` — qidiruv holati. |
+| `AIDEVIX_USE_FZF` | `1` — menyuni fzf bilan ochadi. **Standart — ichki `select_with_arrows`**: ikki ustunli maket, status bar va footer FAQAT unda bor (fzf'da `--footer` yo'q, Windows'da preview ham std o'chiq — natijada fzf o'rnatilganlar tekis ro'yxat ko'rardi). `AIDEVIX_NO_FZF` — fzf'ni butunlay o'chiradi. |
 | `AIDEVIX_FZF_PREVIEW` | `1` — fzf preview'ni majburan yoqadi (Windows/MSYS'da std o'chiq, cygwin fork xatosi uchun). |
 | `AIDEVIX_NO_AUTOUPDATE=1` | Avtomatik yangilanish (git), npm eslatmasi **va** agentni avtomatik yangilash (`maybe_autoupdate_agent`)ni o'chiradi. |
 | `AIDEVIX_UPDATE_INTERVAL` | Tekshirish oralig'i (sekund, std 10800) — aidevix git auto-update, npm tekshiruvi **va** agentni avtomatik yangilash throttle'i. |

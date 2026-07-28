@@ -150,15 +150,54 @@ setup() {
 
 # --- Semantik ranglar -----------------------------------------------------
 
-@test "ranglar: semantik tokenlar 256-rangli terminalda farqli" {
-  UI_TTY=1
-  [ -n "$UI_OK" ] && [ -n "$UI_WARN" ] && [ -n "$UI_ERR" ]
-  [ -n "$UI_INFO" ] && [ -n "$UI_AI" ] && [ -n "$UI_MUTED" ]
-  # Muvaffaqiyat/xato/ogohlantirish bir-biridan farq qilishi SHART.
-  [ "$UI_OK" != "$UI_ERR" ]
-  [ "$UI_OK" != "$UI_WARN" ]
-  [ "$UI_ERR" != "$UI_WARN" ]
-  [ "$UI_AI" != "$UI_INFO" ]
+# palette_script — semantik tokenlarni tekshiruvchi yordamchi skriptni yozadi.
+#
+# MUHIM: palitra common.sh SOURCE QILINGAN PAYTDA hisoblanadi (UI_DEPTH), ya'ni
+# uni testning ichida `UI_TTY=1` deb o'zgartirib bo'lmaydi — kech. Ilgari shu
+# test aynan shunday yozilgan edi va natija TESTNI ISHGA TUSHIRGAN TERMINALGA
+# bog'liq bo'lib qolgandi: ishlab chiquvchida TERM=xterm-256color (o'tardi),
+# CI'da esa TERM=dumb → pog'ona 0 → hamma token bo'sh (yiqilardi).
+# Shuning uchun muhit OLDINDAN beriladi va common.sh qayta source qilinadi.
+palette_script() {
+  cat >"$BATS_TEST_TMPDIR/pal.sh" <<'SH'
+. "$1"
+[ "$UI_DEPTH" = "$2" ] || { echo "pog'ona=$UI_DEPTH (kutilgan $2)"; exit 1; }
+for v in UI_OK UI_WARN UI_ERR UI_INFO UI_AI UI_MUTED; do
+  [ -n "${!v}" ] || { echo "bo'sh token: $v"; exit 1; }
+done
+# Muvaffaqiyat/xato/ogohlantirish bir-biridan farq qilishi SHART.
+[ "$UI_OK"  != "$UI_ERR"  ] || { echo 'UI_OK == UI_ERR';   exit 1; }
+[ "$UI_OK"  != "$UI_WARN" ] || { echo 'UI_OK == UI_WARN';  exit 1; }
+[ "$UI_ERR" != "$UI_WARN" ] || { echo 'UI_ERR == UI_WARN'; exit 1; }
+[ "$UI_AI"  != "$UI_INFO" ] || { echo 'UI_AI == UI_INFO';  exit 1; }
+echo OK
+SH
+  printf '%s' "$BATS_TEST_TMPDIR/pal.sh"
+}
+
+@test "ranglar: 256-rangli terminalda semantik tokenlar farqli" {
+  local s; s="$(palette_script)"
+  run env -u NO_COLOR -u COLORTERM -u WT_SESSION -u TERM_PROGRAM -u ConEmuANSI \
+      FORCE_COLOR=1 TERM=xterm-256color bash "$s" "$COMMON" 256
+  [ "$status" -eq 0 ]
+  [ "$output" = "OK" ]
+}
+
+@test "ranglar: 16-rangli terminalda ham tokenlar farqli (zaxira pog'ona)" {
+  # 256 ni ko'tarmaydigan terminal: palitra standart ANSI ranglarga tushadi,
+  # lekin semantika saqlanishi kerak — tokenlar baribir farq qilsin.
+  local s; s="$(palette_script)"
+  run env -u NO_COLOR -u COLORTERM -u WT_SESSION -u TERM_PROGRAM -u ConEmuANSI \
+      FORCE_COLOR=1 TERM=xterm bash "$s" "$COMMON" 16
+  [ "$status" -eq 0 ]
+  [ "$output" = "OK" ]
+}
+
+@test "ranglar: TERM=dumb bo'lsa rang umuman chiqmaydi" {
+  run env -u NO_COLOR -u COLORTERM -u WT_SESSION -u TERM_PROGRAM -u ConEmuANSI \
+      FORCE_COLOR=1 TERM=dumb bash -c ". '$COMMON'; printf '[%s%s%s%s]' \
+        \"\$UI_OK\" \"\$UI_ERR\" \"\$UI_WARN\" \"\$UI_AI\""
+  [ "$output" = "[]" ]
 }
 
 @test "ranglar: NO_COLOR bo'lsa hamma token bo'sh" {

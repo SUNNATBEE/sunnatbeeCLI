@@ -42,24 +42,42 @@ setup() {
 @test "--list: o'rnatilgan/yo'q holatini ko'rsatadi" {
   run_cli --list
   [ "$status" -eq 0 ]
-  # Alpha (bash) → ✓, Bravo (mavjud emas) → ✗
-  [[ "$output" == *"✓"* ]]
-  [[ "$output" == *"✗"* ]]
+  # Holat MATNI tekshiriladi, belgi emas: belgi ikonka pog'onasiga bog'liq
+  # (nerd/unicode/ascii), matn esa barqaror shartnoma.
+  [[ "$output" == *"o'rnatilgan"* ]]
+  [[ "$output" == *"yo'q"* ]]
 }
 
-@test "--list: HOLAT ustuni emoji bo'lsa ham GURUH ustunini tekis saqlaydi" {
-  # ✓/✗ belgisi 3 bayt, 1 ustun — `%-Ns` baytlab to'ldirgani uchun emoji'li
-  # qatorlar siljib qolmasligi kerak. Alpha (✓, Coding) va Bravo (✗, Local)
-  # da kategoriya bir xil ustundan boshlanishi shart (regressiya testi).
+@test "--list: chiqish STDOUT'ga ketadi (quvurga tushadi)" {
+  # `aidevix --list | grep ...` ishlashi kerak — jadval stdout'da bo'lsin,
+  # log/menyu esa stderr'da qolsin.
+  run bash -c "bash '$SELECTOR' --list 2>/dev/null"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Alpha CLI"* ]]
+}
+
+@test "--list: ustunlar holat uzunligidan qat'i nazar tekis turadi" {
+  # Rangli/belgili ustunlarni `%-Ns` bilan to'ldirib bo'lmaydi (ANSI baytlari
+  # ham sanaladi) — to'ldirish ui_pad_v bilan qilinadi. Alpha (o'rnatilgan,
+  # Coding) va Bravo (yo'q, Local) da GURUH ustuni bir joydan boshlanishi shart.
   run_cli --list
   [ "$status" -eq 0 ]
   local alpha bravo pa pb
-  alpha="$(printf '%s\n' "$output" | grep '^Alpha CLI')"
-  bravo="$(printf '%s\n' "$output" | grep '^Bravo CLI')"
-  # Kategoriyagacha bo'lgan prefiksning kenglik (ustun) o'rni — emoji'siz, ASCII.
+  alpha="$(printf '%s\n' "$output" | grep 'Alpha CLI')"
+  bravo="$(printf '%s\n' "$output" | grep 'Bravo CLI')"
   pa="${alpha%%Coding*}"
   pb="${bravo%%Local*}"
   [ "${#pa}" -eq "${#pb}" ]
+}
+
+@test "--list: interfeysda emoji qolmaydi" {
+  run_cli --list
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"🆓"* ]]
+  [[ "$output" != *"🔑"* ]]
+  [[ "$output" != *"🌐"* ]]
+  [[ "$output" != *"💳"* ]]
+  [[ "$output" != *"⭐"* ]]
 }
 
 # --- Noto'g'ri argumentlar ------------------------------------------------

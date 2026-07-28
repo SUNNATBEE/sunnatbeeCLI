@@ -61,7 +61,7 @@ NS_JSON='{"updated_at":"x","totals":{"install":4,"launch":1},"install":[{"agent"
 }
 
 # --- menyu belgisi --------------------------------------------------------
-@test "build_menu: global yoqilganda 🔥 reyting belgisini ko'rsatadi" {
+@test "build_menu: global yoqilganda reyting raqamini ko'rsatadi (emoji'siz)" {
   export AI_PULT_CONFIG="$FIXTURE_CONFIG"
   mkdir -p "$STATE_DIR"
   # Fixture agentlaridan biri uchun global reyting beramiz.
@@ -71,7 +71,10 @@ NS_JSON='{"updated_at":"x","totals":{"install":4,"launch":1},"install":[{"agent"
   local rows; rows="$(build_rows "$FIXTURE_CONFIG")"
   run build_menu "$rows" "$STATS_FILE" "$gtsv"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"🔥#1"* ]]
+  # Reyting KO'RINADI, lekin faqat raqam bilan: dizayn qayta ishlangandan keyin
+  # meta zonasi emoji'siz (ma'no ikonka pog'onasi va so'nik rang orqali beriladi).
+  [[ "$output" == *"#1"* ]]
+  [[ "$output" != *"🔥"* ]]
 }
 
 # --- xavfsiz no-op (tarmoqsiz) --------------------------------------------

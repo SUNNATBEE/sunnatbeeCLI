@@ -83,19 +83,41 @@ setup() {
 }
 
 # --- build_rows (holat ustuni) -------------------------------------------
-@test "build_rows: mavjud binar uchun '✓ o'rnatilgan' holat beradi" {
+# STATUS endi MASHINA O'QIYDIGAN token ("installed"/"missing"), belgi/tarjima
+# emas. Belgiga (✓/●/*) aylantirish faqat CHIZISH bosqichida bo'ladi va
+# ikonka pog'onasiga bog'liq — shuning uchun test tokenni tekshiradi.
+@test "build_rows: mavjud binar uchun 'installed' tokeni beradi" {
   run build_rows "$FIXTURE_CONFIG"
   local alpha
   alpha="$(printf '%s\n' "${lines[@]}" | grep '^Alpha CLI')"
   # 7-maydon = status. Alpha binari = bash → mavjud.
-  [[ "$(printf '%s' "$alpha" | cut -f7)" == *"✓"* ]]
+  [ "$(printf '%s' "$alpha" | cut -f7)" = "installed" ]
 }
 
-@test "build_rows: mavjud bo'lmagan binar uchun '✗ yo'q' holat beradi" {
+@test "build_rows: mavjud bo'lmagan binar uchun 'missing' tokeni beradi" {
   run build_rows "$FIXTURE_CONFIG"
   local bravo
   bravo="$(printf '%s\n' "${lines[@]}" | grep '^Bravo CLI')"
-  [[ "$(printf '%s' "$bravo" | cut -f7)" == *"✗"* ]]
+  [ "$(printf '%s' "$bravo" | cut -f7)" = "missing" ]
+}
+
+@test "build_rows: authclass va provider maydonlarini qo'shadi (10, 11)" {
+  run build_rows "$FIXTURE_CONFIG"
+  local alpha
+  alpha="$(printf '%s\n' "${lines[@]}" | grep '^Alpha CLI')"
+  # Fixture'dagi Alpha AUTH maydoni 🔑 bilan → authclass "key".
+  [ "$(printf '%s' "$alpha" | cut -f10)" = "key" ]
+  # Provider bo'sh bo'lmasligi kerak (aniqlanmasa ham "local" qaytadi).
+  [ -n "$(printf '%s' "$alpha" | cut -f11)" ]
+}
+
+@test "build_rows: DESC va AUTH maydonlaridan emoji olib tashlanadi" {
+  run build_rows "$FIXTURE_CONFIG"
+  # Butun chiqishda auth/desc emoji belgilari qolmasligi kerak.
+  [[ "$output" != *"🔑"* ]]
+  [[ "$output" != *"🆓"* ]]
+  [[ "$output" != *"🌐"* ]]
+  [[ "$output" != *"💳"* ]]
 }
 
 # --- should_open_login_link ----------------------------------------------

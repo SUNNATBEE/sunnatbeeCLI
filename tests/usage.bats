@@ -64,7 +64,7 @@ setup() {
   [[ "$first" == *"2×"* ]]
 }
 
-@test "build_menu: oxirgi ishlatilgan agent hammadan tepada (↩ belgisi bilan)" {
+@test "build_menu: oxirgi ishlatilgan agent hammadan tepada ('oxirgi' belgisi bilan)" {
   export AI_PULT_CONFIG="$FIXTURE_CONFIG"
   record_usage "Alpha CLI"
   record_usage "Alpha CLI"       # boshqa agent ko'proq ishlatilgan bo'lsa ham
@@ -73,7 +73,9 @@ setup() {
   [ "$status" -eq 0 ]
   local first; first="$(printf '%s\n' "$output" | head -1)"
   [[ "$first" == *"Charlie"* ]]
-  [[ "$first" == *"↩"* ]]
+  # Belgi POG'ONAGA bog'liq: unicode'da '↩', ascii'da '<'. Testlar LC_ALL=C
+  # bilan (ya'ni ascii) ishlagani uchun belgini ICO jadvalidan olamiz.
+  [[ "$first" == *"${ICO[last]}"* ]]
 }
 
 @test "build_menu: statistikasiz config tartibini saqlaydi (barqaror)" {

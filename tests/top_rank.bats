@@ -12,19 +12,21 @@ setup() {
   load_selector
 }
 
-# --- ⭐ belgisi -----------------------------------------------------------
-@test "build_menu: top agent yonida ⭐ belgisi ko'rinadi" {
+# --- Top belgisi ATAYLAB yo'q --------------------------------------------
+@test "build_menu: top agent yonida ⭐ belgisi CHIQMAYDI (tartibning o'zi yetarli)" {
+  # Dizayn qarori: qatorlar allaqachon mashhurlik bo'yicha saralangan (istop
+  # saralash kalitida qatnashadi), ya'ni yulduzcha o'sha ma'noni TAKRORLAB,
+  # ro'yxatning yarmida shovqin hosil qilardi. Regressiya testi: belgi
+  # qaytib kelmasin.
   export AI_PULT_CONFIG="$FIXTURE_CONFIG"
   TOP_AGENTS="charliebin"            # Charlie binari = top deb belgilaymiz
   local rows; rows="$(build_rows "$FIXTURE_CONFIG")"
   run build_menu "$rows" "$STATS_FILE"
   [ "$status" -eq 0 ]
-  # Charlie qatorida ⭐ bo'lsin; top bo'lmagan Alpha CLI'da ⭐ bo'lmasin.
-  local charlie alpha
-  charlie="$(printf '%s\n' "$output" | grep 'Charlie')"
-  alpha="$(printf '%s\n' "$output" | grep 'Alpha CLI')"
-  [[ "$charlie" == *"⭐"* ]]
-  [[ "$alpha" != *"⭐"* ]]
+  [[ "$output" != *"⭐"* ]]
+  # Top agent baribir tepada turishi kerak — ma'no yo'qolmagan.
+  local first; first="$(printf '%s\n' "$output" | head -1)"
+  [[ "$first" == *"Charlie"* ]]
 }
 
 # --- Saralash: top agent statistikasiz ham tepaga chiqadi ------------------

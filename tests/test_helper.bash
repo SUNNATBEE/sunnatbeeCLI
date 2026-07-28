@@ -28,26 +28,46 @@ setup_env() {
   unset ALPHA_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY 2>/dev/null || true
 }
 
-# load_selector — ai-selector.sh'ni source qiladi (funksiyalarni test qilish uchun).
-# Skript `set -Eeuo pipefail` bilan keladi; testda errexit/nounset/ERR-tutqich
-# halal qilmasligi uchun ularni o'chiramiz (funksiya `return 1` qilsa ham test
-# yiqilmasligi kerak — bu kutilgan natija bo'lishi mumkin).
-load_selector() {
-  # shellcheck disable=SC1090
-  source "$SELECTOR"
-  set +eEu
-  set +o pipefail
+# --- Bats tutqichlarini saqlash/tiklash -----------------------------------
+# MUHIM: bats testning yiqilganini O'ZINING ERR/EXIT tutqichlari orqali
+# aniqlaydi. Sinaladigan skriptlar esa `set -Eeuo pipefail` + o'z tutqichlarini
+# (`crash`) o'rnatadi va ularni BOSIB KETADI. Ilgari bu yerda shunchaki
+# `trap - ERR; trap - EXIT` qilinardi — natijada bats yiqilishni umuman
+# ko'rmay qolardi va YIQILGAN test ham "ok" bo'lib chiqardi (butun to'plam
+# soxta yashil edi). Shuning uchun endi tutqichlar source'dan OLDIN saqlanadi
+# va keyin QAYTA tiklanadi.
+_save_bats_traps() {
+  __BATS_ERR_TRAP="$(trap -p ERR)"
+  __BATS_EXIT_TRAP="$(trap -p EXIT)"
+}
+_restore_bats_traps() {
   trap - ERR
   trap - EXIT
+  [[ -n "${__BATS_ERR_TRAP:-}"  ]] && eval "$__BATS_ERR_TRAP"
+  [[ -n "${__BATS_EXIT_TRAP:-}" ]] && eval "$__BATS_EXIT_TRAP"
+  # bats semantikasi: xato qaytargan buyruq testni yiqitadi (`run`/`!`/`||`
+  # bilan o'ralganlar bundan mustasno). nounset va pipefail esa o'chiq —
+  # ular skriptning ichki qoidasi, testga aloqasi yo'q.
+  set -eE
+  set +u
+  set +o pipefail
+  return 0
+}
+
+# load_selector — ai-selector.sh'ni source qiladi (funksiyalarni test qilish uchun).
+load_selector() {
+  _save_bats_traps
+  # shellcheck disable=SC1090
+  source "$SELECTOR"
+  _restore_bats_traps
 }
 
 # load_common — faqat lib/common.sh'ni source qiladi.
 load_common() {
+  _save_bats_traps
   # shellcheck disable=SC1090
   source "$COMMON"
-  set +eEu
-  set +o pipefail
-  trap - ERR 2>/dev/null || true
+  _restore_bats_traps
 }
 
 # run_cli — ai-selector.sh'ni alohida jarayonda (qora-quti) ishga tushiradi.

@@ -7,6 +7,8 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.9.0] — 2026-07-28
+
 ### Qo'shildi
 - **Logotip endi TO'LIQ "AIDEVIX" so'zi** (ilgari "AD" monogrammasi edi).
   52 ustundan tor terminalda monogrammaga qaytadi — to'liq so'z 49 ustun

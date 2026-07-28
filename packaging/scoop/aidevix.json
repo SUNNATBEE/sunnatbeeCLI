@@ -1,5 +1,5 @@
 {
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "One command, 28+ top AI CLIs — interactive launcher for terminal AI agents (requires Git Bash).",
   "homepage": "https://github.com/SUNNATBEE/sunnatbeeCLI",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "fzf": "fzf"
   },
   "url": "https://github.com/SUNNATBEE/sunnatbeeCLI/archive/refs/tags/v1.7.4.zip",
-  "extract_dir": "sunnatbeeCLI-1.8.0",
+  "extract_dir": "sunnatbeeCLI-1.9.0",
   "bin": [
     [
       "bin\\aidevix.cmd",

@@ -30,6 +30,7 @@ complete -c aidevix -n $no_subcmd -s d -l doctor  -d "muhitni tekshiradi"
 complete -c aidevix -n $no_subcmd -s a -l add     -d "interaktiv yangi agent qo'shadi"
 complete -c aidevix -n $no_subcmd -s s -l stats   -d "global statistika (opt-in): on/off"
 complete -c aidevix -n $no_subcmd -s L -l lang    -d "interfeys tili: en/uz"
+complete -c aidevix -n $no_subcmd -s i -l icons   -d "ikonka uslubi: nerd/unicode/ascii/auto"
 complete -c aidevix -n $no_subcmd -s v -l version -d "versiyani ko'rsatadi"
 complete -c aidevix -n $no_subcmd -s h -l help    -d "yordam matnini ko'rsatadi"
 

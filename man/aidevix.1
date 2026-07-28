@@ -1,5 +1,5 @@
 .\" man sahifa — Aidevix CLI
-.TH AIDEVIX 1 "2026-07-27" "Aidevix CLI 1.7.4" "User Commands"
+.TH AIDEVIX 1 "2026-07-28" "Aidevix CLI 1.8.0" "User Commands"
 .SH NAME
 aidevix \- terminaldagi AI CLI agentlarini bitta menyudan boshqarish
 .SH SYNOPSIS
@@ -41,6 +41,12 @@ tushganda faqat agent nomi + hodisa turi serverga yuboriladi (shaxsiy ma'lumotsi
 Interfeys tilini tanlaydi (ilk ishga tushishda so'raladi) yoki o'rnatadi.
 Argumentsiz \(em interaktiv til tanlovini ochadi.
 .TP
+.BR \-i ", " \-\-icons " [nerd|unicode|ascii|auto]"
+Ikonka uslubi. Standart holatda AVTOMATIK aniqlanadi: Nerd Font o'rnatilgan
+bo'lsa \fBnerd\fR, aks holda \fBunicode\fR; UTF-8 bo'lmagan muhitda (masalan
+\fBLANG=C\fR) \fBascii\fR. Argumentsiz \(em joriy uslubni va namuna belgilarni
+ko'rsatadi; \fBauto\fR \(em keshni tashlab, qaytadan aniqlaydi.
+.TP
 .BR \-v ", " \-\-version
 Aidevix CLI versiyasini ko'rsatadi.
 .TP
@@ -67,6 +73,10 @@ Boshqa konfiguratsiya faylining yo'li.
 .B AIDEVIX_LANG
 Interfeys tili: \fBuz\fR yoki \fBen\fR. Berilmasa saqlangan tanlovdan, so'ng
 \fBLANG\fR/locale'dan aniqlanadi (yoki ilk ishga tushishda so'raladi).
+.TP
+.B AIDEVIX_ICONS
+Ikonka uslubi: \fBnerd\fR, \fBunicode\fR, \fBascii\fR yoki \fBauto\fR.
+Aniqlash va saqlangan tanlovdan USTUN turadi (qarang \fB\-\-icons\fR).
 .TP
 .B AIDEVIX_FZF_PREVIEW
 1 bo'lsa fzf menyusida o'ng tomondagi preview'ni majburan yoqadi (Windows'da

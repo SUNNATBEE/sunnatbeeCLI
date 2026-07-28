@@ -22,6 +22,7 @@ _aidevix() {
     '(-a --add)'{-a,--add}'[interaktiv yangi agent qo'\''shadi]'
     '(-s --stats)'{-s,--stats}'[global statistika (opt-in): on/off]'
     '(-L --lang)'{-L,--lang}'[interfeys tili: en/uz]'
+    '(-i --icons)'{-i,--icons}'[ikonka uslubi: nerd/unicode/ascii/auto]'
     '(-v --version)'{-v,--version}'[versiyani ko'\''rsatadi]'
     '(-h --help)'{-h,--help}'[yordam matnini ko'\''rsatadi]'
   )

@@ -34,7 +34,9 @@ jobs:
       - name: bash -n (barcha skriptlar)
         run: |
           set -e
-          for f in bootstrap.sh install.sh uninstall.sh bin/ai-selector.sh lib/common.sh completions/aidevix.bash; do
+          for f in bootstrap.sh install.sh uninstall.sh bin/ai-selector.sh \
+                   lib/common.sh lib/ui.sh lib/i18n.sh lib/i18n/en.sh \
+                   completions/aidevix.bash; do
             echo "→ $f"
             bash -n "$f"
           done
@@ -51,15 +53,19 @@ jobs:
           set -e
           fail=0
           # 6 majburiy (5 "|") + AUTH + URL (ixtiyoriy) => 5..7 "|" ruxsat etiladi.
-          while IFS= read -r line; do
-            case "$line" in ''|\#*) continue ;; esac
-            n=$(printf '%s' "$line" | tr -cd '|' | wc -c)
-            name=$(printf '%s' "$line" | cut -d'|' -f1)
-            if [ "$n" -lt 5 ] || [ "$n" -gt 7 ]; then
-              echo "::error::Noto'g'ri maydon soni ($n ta '|', 5-7 kerak): $name"
-              fail=1
-            fi
-          done < config/agents.conf
+          # TEST FIXTURE'i ham tekshiriladi: u buzilib qolsa maydonlar surilib
+          # ketadi va testlar "sababsiz" yiqiladi (shunday holat bo'lgan).
+          for cfg in config/agents.conf tests/fixtures/agents.conf; do
+            while IFS= read -r line; do
+              case "$line" in ''|\#*) continue ;; esac
+              n=$(printf '%s' "$line" | tr -cd '|' | wc -c)
+              name=$(printf '%s' "$line" | cut -d'|' -f1)
+              if [ "$n" -lt 5 ] || [ "$n" -gt 7 ]; then
+                echo "::error::$cfg — noto'g'ri maydon soni ($n ta '|', 5-7 kerak): $name"
+                fail=1
+              fi
+            done < "$cfg"
+          done
           [ "$fail" -eq 0 ] && echo "✓ agents.conf formati to'g'ri."
 
   bats:

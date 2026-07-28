@@ -8,7 +8,11 @@
 
 SHELL := /usr/bin/env bash
 
-SCRIPTS := bootstrap.sh install.sh uninstall.sh bin/ai-selector.sh lib/common.sh completions/aidevix.bash
+# lib/ui.sh va i18n fayllari HAM shu ro'yxatda bo'lishi shart — aks holda
+# dizayn tizimi (500+ qator) umuman lint/sintaksis tekshiruvidan o'tmaydi.
+SCRIPTS := bootstrap.sh install.sh uninstall.sh bin/ai-selector.sh \
+           lib/common.sh lib/ui.sh lib/i18n.sh lib/i18n/en.sh \
+           completions/aidevix.bash
 
 .PHONY: test lint syntax check install-dev help
 

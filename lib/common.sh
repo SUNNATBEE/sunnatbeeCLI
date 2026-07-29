@@ -206,12 +206,11 @@ open_url() {
 hr() { ui_rule "${1:-46}"; }
 
 # --- Brend sarlavhasi -----------------------------------------------------
-# Falsafa: katta ASCII logo — TANISHUV uchun, har kunlik ish uchun emas.
-# Shuning uchun to'liq logo FAQAT ilk ishga tushishda (yoki --version'da)
-# ko'rsatiladi; keyin har safar bir qatorli ixcham sarlavha chiqadi.
-# Buni BANNER_FULL=1 bilan majburlash, BANNER_FULL=0 bilan o'chirish mumkin.
+# To'liq brend bloki (katta ASCII logo) HAR ishga tushishda ko'rsatiladi.
+# Ixcham bir qatorli sarlavhaga qaytish: BANNER_FULL=0 (env), majburan
+# to'liq — BANNER_FULL=1.
 
-# banner_full [sarlavha] [kichik-sarlavha] — to'liq brend bloki (ilk run).
+# banner_full [sarlavha] [kichik-sarlavha] — to'liq brend bloki.
 banner_full() {
   local title="${1:-Aidevix}" subtitle="${2:-$(t 'barcha AI agentlar — bitta pultda')}"
   if [[ "${UI_TTY:-0}" -ne 1 ]]; then
@@ -272,16 +271,18 @@ banner_full() {
 }
 
 # banner [sarlavha] [kichik-sarlavha]
-#   Standart chaqiruv: ilk marta — to'liq blok, keyin — ixcham sarlavha.
-#   "Ilk marta" belgisi BANNER_SEEN_FILE bilan aniqlanadi (chaqiruvchi beradi).
+#   Standart chaqiruv: HAR SAFAR to'liq brend bloki (katta ASCII logo).
+#   Ixcham bir qatorli sarlavhaga qaytish: BANNER_FULL=0.
+#   BANNER_SEEN_FILE marker'i faqat "ilk run" faktini yozib boradi (boshqa
+#   joylar shunga tayanishi mumkin), lekin endi logo ko'rsatishga ta'sir qilmaydi.
 banner() {
   local title="${1:-Aidevix}" subtitle="${2:-}"
   local seen="${BANNER_SEEN_FILE:-}"
-  local full=0
+  local full=1
   if [[ -n "${BANNER_FULL:-}" ]]; then
     full="$BANNER_FULL"
-  elif [[ -n "$seen" && ! -e "$seen" ]]; then
-    full=1
+  fi
+  if [[ -n "$seen" && ! -e "$seen" ]]; then
     mkdir -p "$(dirname "$seen")" 2>/dev/null && : >"$seen" 2>/dev/null || true
   fi
 

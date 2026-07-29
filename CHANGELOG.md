@@ -7,6 +7,16 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.9.1] — 2026-07-29
+
+### O'zgardi
+- **Katta "AIDEVIX" logotipi endi HAR ishga tushishda chiziladi.** Ilgari to'liq
+  brend bloki faqat ILK run'da ko'rinardi (`~/.local/state/ai-cli/seen_banner`
+  marker'i), keyingi safarlar ixcham bir qatorli sarlavha bilan ochilardi —
+  natijada logotip "yo'qolgandek" tuyulardi. Marker fayl saqlanib qoldi (ilk
+  run faktini yozadi), lekin logo ko'rsatishga endi ta'sir qilmaydi.
+  Ixcham sarlavhaga qaytish: `BANNER_FULL=0`.
+
 ## [1.9.0] — 2026-07-28
 
 ### Qo'shildi

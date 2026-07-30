@@ -50,8 +50,13 @@
   ],
   "scripts": {
     "test": "bats tests/",
+    "lint": "shellcheck bin/*.sh lib/*.sh config/*.conf",
+    "format": "shfmt -w bin/*.sh lib/*.sh",
     "version:check": "node scripts/check-version-sync.js",
     "prepack": "node scripts/check-version-sync.js",
     "postinstall": "node bin/postinstall.js"
+  },
+  "devDependencies": {
+    "bats": "^1.11.0"
   }
 }

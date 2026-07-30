@@ -27,6 +27,20 @@ const pkgVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
 // CRLF/BOM/bo'sh qatorlar — Windows'da tahrirlanganda paydo bo'ladi.
 const fileVersion = fs.readFileSync(verPath, 'utf8').replace(/^﻿/, '').trim();
 
+// Qat'iy SemVer tekshiruvi: faqat raqamlar va nuqtalardan iborat bo'lishi kerak (masalan: 1.9.4)
+const semverRegex = /^\d+\.\d+\.\d+$/;
+
+if (!semverRegex.test(pkgVersion) || !semverRegex.test(fileVersion)) {
+  console.error(
+    '\n[x] VERSIYA FORMATI XATO — publish to\'xtatildi.\n' +
+    `      package.json : "${pkgVersion}"\n` +
+    `      VERSION      : "${fileVersion}"\n\n` +
+    '    Versiyalar qat\'iy "X.Y.Z" formatida bo\'lishi shart (masalan: 1.9.4).\n' +
+    '    Oldida "v" harfi yoki boshqa belgilar/bo\'shliqlar qolib ketmasin.\n'
+  );
+  process.exit(1);
+}
+
 if (pkgVersion !== fileVersion) {
   console.error(
     '\n[x] VERSIYALAR MOS KELMAYDI — publish to\'xtatildi.\n' +

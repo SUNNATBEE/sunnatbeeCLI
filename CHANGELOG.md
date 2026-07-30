@@ -7,6 +7,32 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.9.4] — 2026-07-30
+
+### Qo'shildi
+- **`aidevix --doctor` endi O'RNATISHNI tekshiradi** — "kimda yangi versiya
+  o'rnatiladi, kimda yo'q" savolining javobi shu yerda. Yangi ikki bo'lim:
+  - **O'rnatish:** ishlayotgan versiya, ildiz papka va kanal (git / npm /
+    qo'lda); so'ng **PATH bo'yicha BARCHA nusxalar** versiyasi bilan sanaladi.
+    Bir nechta nusxa topilsa — ogohlantirish, PATH'da BIRINCHI turgani
+    ishlayotganidan boshqa bo'lsa — alohida "nomuvofiq" qatori.
+  - **Yangilanish holati:** git kanalida — auto-update yoqilganmi yoki
+    **commit qilinmagan o'zgarishlar tufayli BLOKLANGANmi**; npm kanalida —
+    keshdagi eng so'nggi versiya va throttle oralig'i; `AIDEVIX_NO_AUTOUPDATE`
+    bilan o'chirilgan bo'lsa — buni ham aytadi.
+
+  **Sabab:** `npm i -g aidevix@latest` BITTA nusxani yangilaydi, terminal esa
+  PATH'da OLDINDA turgan BOSHQA nusxani ishga tushiradi (masalan
+  `~/.local/bin/aidevix` → git o'rnatish, `AppData/Roaming/npm/aidevix` → npm
+  o'rnatish). Foydalanuvchi "yangiladim, lekin o'zgarmadi" deb o'ylaydi —
+  aslida u yangilangan faylni umuman ishlatmayapti. Ilgari buni aniqlashning
+  hech qanday yo'li yo'q edi.
+
+  Yana ikki sabab shu bo'limda ko'rinadi: git kanalida bitta commit qilinmagan
+  o'zgarish auto-update'ni butunlay to'xtatadi (JIM), npm kanalida esa versiya
+  keshi FONDA yangilanadi va throttle 3 soat — ya'ni yangi reliz hammaga bir
+  vaqtda emas, bir necha soat davomida asta-sekin yetib boradi.
+
 ## [1.9.3] — 2026-07-30
 
 ### Tuzatildi

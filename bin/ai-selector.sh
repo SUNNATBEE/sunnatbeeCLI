@@ -2553,6 +2553,117 @@ doctor() {
     fi
   fi
 
+  # --- O'rnatish va yangilanish kanali --------------------------------------
+  # NEGA BU BO'LIM BOR: "kimda yangilanadi, kimda yo'q" shikoyatining eng keng
+  # tarqalgan sababi — BIR NECHTA o'rnatilgan nusxa. `npm i -g aidevix@latest`
+  # BITTA nusxani yangilaydi, terminal esa PATH'da OLDINDA turgan BOSHQA
+  # nusxani ishga tushiradi. Foydalanuvchi "yangiladim, lekin hech narsa
+  # o'zgarmadi" deb o'ylaydi — aslida u yangilangan faylni umuman ishlatmayapti.
+  # Shu bo'lim aynan shuni ko'zga tashlanadigan qilib ko'rsatadi.
+  d_section "$(t "O'rnatish:")"
+
+  # _shim_root <shim> — PATH'dagi `aidevix` fayli QAYSI o'rnatishga olib
+  # borishini aniqlaydi (npm shim'i yoki bash wrapper'i ichidan yo'lni oladi).
+  _shim_root() {
+    local shim="$1" dir p
+    dir="$(dirname "$shim")"
+    if grep -q 'node_modules/aidevix' "$shim" 2>/dev/null \
+       && [[ -d "$dir/node_modules/aidevix" ]]; then
+      printf '%s' "$dir/node_modules/aidevix"; return 0
+    fi
+    p="$(grep -oE '/[^"'"'"' ]*/bin/ai-selector\.sh' "$shim" 2>/dev/null | head -1)"
+    [[ -n "$p" ]] && { printf '%s' "${p%/bin/ai-selector.sh}"; return 0; }
+    return 1
+  }
+
+  local chan
+  if [[ -d "$PROJECT_ROOT/.git" ]]; then
+    chan="$(t 'git — avtomatik yangilanadi')"
+  elif is_npm_install; then
+    chan="$(t 'npm — yangilash TAKLIF qilinadi')"
+  else
+    chan="$(t "qo'lda o'rnatilgan")"
+  fi
+  d_row ok "$(t 'versiya')" "$AIDEVIX_VERSION"
+  d_row off "$(t 'ildiz')" "$PROJECT_ROOT"
+  d_row off "$(t 'kanal')" "$chan"
+
+  # PATH bo'yicha BARCHA nusxalarni sanab chiqamiz (tartib bilan).
+  local -a seen=() found=()
+  local pd shim root ver first_root=""
+  local oldifs="$IFS"; IFS=':'
+  # shellcheck disable=SC2206
+  local -a pdirs=($PATH)
+  IFS="$oldifs"
+  for pd in "${pdirs[@]}"; do
+    [[ -n "$pd" && -d "$pd" ]] || continue
+    for shim in "$pd/aidevix" "$pd/aidevix.cmd"; do
+      [[ -f "$shim" ]] || continue
+      root="$(_shim_root "$shim" 2>/dev/null || true)"
+      [[ -n "$root" ]] || continue
+      # Bir ildizni ikki marta ko'rsatmaymiz (aidevix va aidevix.cmd bir joyga).
+      local dup=0 s
+      for s in ${seen[@]+"${seen[@]}"}; do [[ "$s" == "$root" ]] && dup=1; done
+      (( dup )) && continue
+      seen+=("$root")
+      ver="$(tr -d ' \t\r\n' < "$root/VERSION" 2>/dev/null || true)"
+      [[ -n "$ver" ]] || ver="$(t 'noma'\''lum')"
+      [[ -z "$first_root" ]] && first_root="$root"
+      if [[ "$root" == "$PROJECT_ROOT" ]]; then
+        d_row ok "$(t 'nusxa')" "v$ver — $root  ← $(t 'hozir ishlayotgan')"
+      else
+        d_row warn "$(t 'nusxa')" "v$ver — $root"
+      fi
+      found+=("$root")
+    done
+  done
+
+  # ENG MUHIM ogohlantirish: PATH'da BIRINCHI turgan nusxa ishlayotgani EMAS.
+  if (( ${#found[@]} > 1 )); then
+    d_row warn "$(t 'diqqat')" \
+      "$(t "%s ta alohida o'rnatish topildi — yangilash chalkashligining asosiy sababi." "${#found[@]}")"
+    if [[ -n "$first_root" && "$first_root" != "$PROJECT_ROOT" ]]; then
+      d_row err "$(t 'nomuvofiq')" \
+        "$(t "PATH'da BIRINCHI: %s — ya'ni 'aidevix' O'SHANI ishga tushiradi, buni emas." "$first_root")"
+    fi
+    d_row off "$(t 'yechim')" \
+      "$(t "keraksiz nusxani olib tashlang: npm rm -g aidevix  yoki  rm -rf ~/.ai-cli")"
+  fi
+
+  # Yangilanish kanalining HOLATI — nega yangilanmayotganini ko'rsatadi.
+  d_section "$(t 'Yangilanish holati:')"
+  if [[ -d "$PROJECT_ROOT/.git" ]] && command -v git >/dev/null 2>&1; then
+    # JIM QOTIL: commit qilinmagan bitta o'zgarish auto_update'ni BUTUNLAY
+    # to'xtatadi (lokal ishni clobber qilmaslik uchun) — foydalanuvchi esa
+    # nega yangilanmayotganini bilmaydi.
+    if [[ -n "$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null)" ]]; then
+      d_row err "auto-update" \
+        "$(t "BLOKLANGAN: commit qilinmagan o'zgarishlar bor (git status).")"
+    else
+      d_row ok "auto-update" "$(t 'yoqilgan')"
+    fi
+  elif is_npm_install; then
+    local cached="" age=""
+    [[ -r "$NPM_LATEST_CACHE" ]] && cached="$(tr -d ' \t\r\n' < "$NPM_LATEST_CACHE" 2>/dev/null || true)"
+    if [[ -n "$cached" ]]; then
+      d_row off "$(t 'npm keshi')" "$(t "eng so'nggi: %s" "$cached")"
+      version_gt "$cached" "$AIDEVIX_VERSION" \
+        && d_row warn "$(t 'yangilash')" "npm i -g $NPM_PKG@latest" \
+        || d_row ok "$(t 'holat')" "$(t "eng so'nggi")"
+    else
+      # Kesh FONDA to'ldiriladi — ya'ni ilk ishga tushishda hech narsa
+      # ko'rsatilmaydi, yangi versiya KEYINGI safar bilinadi.
+      d_row off "$(t 'npm keshi')" "$(t "hali yo'q — yangi versiya KEYINGI ishga tushishda bilinadi")"
+    fi
+    age="${AIDEVIX_UPDATE_INTERVAL:-10800}"
+    d_row off "$(t 'tekshiruv')" "$(t "har %s sekundda (throttle)" "$age")"
+  else
+    d_row off "auto-update" "$(t "yo'q — qo'lda o'rnatilgan nusxa")"
+  fi
+  if [[ -n "${AIDEVIX_NO_AUTOUPDATE:-}" ]]; then
+    d_row warn "auto-update" "$(t "AIDEVIX_NO_AUTOUPDATE=1 bilan O'CHIRILGAN")"
+  fi
+
   d_section "$(t 'Interfeys:')"
   d_row off "$(t 'ikonkalar')" "${UI_ICON_TIER:-unicode}"
   d_row off "$(t 'ranglar')" "$UI_DEPTH"

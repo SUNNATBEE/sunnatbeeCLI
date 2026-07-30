@@ -9,6 +9,21 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [1.9.4] — 2026-07-30
 
+### Tuzatildi
+- **⚠️ `auto_update` push qilinmagan LOKAL COMMITLARNI o'chirib yuborardi.**
+  git kanalidagi yangilanish `git reset --hard FETCH_HEAD` bilan bajariladi.
+  Undan oldin faqat `git status --porcelain` tekshirilardi — ya'ni commit
+  QILINMAGAN o'zgarishlar. Ammo ish commit qilingan, lekin hali push
+  qilinmagan bo'lsa, ishchi daraxt TOZA ko'rinadi: to'siq o'tib ketadi va
+  reset commitlarni izsiz (reflog'dan tashqari) yo'q qiladi. Endi reset faqat
+  **fast-forward** bo'lganda bajariladi
+  (`git merge-base --is-ancestor HEAD FETCH_HEAD`); aks holda yangilash
+  o'tkazib yuboriladi va sababi aytiladi.
+  > Bu nazariy xavf emas: `~/.ai-cli` bir vaqtning o'zida ham o'rnatish
+  > papkasi, ham git ish papkasi bo'lgani uchun loyiha ustida ishlaganda
+  > AYNAN shu holat ro'y berdi — uchta commit shunday yo'qoldi (reflog'dan
+  > tiklandi).
+
 ### Qo'shildi
 - **`aidevix --doctor` endi O'RNATISHNI tekshiradi** — "kimda yangi versiya
   o'rnatiladi, kimda yo'q" savolining javobi shu yerda. Yangi ikki bo'lim:

@@ -156,6 +156,72 @@ EOF
   [ -n "$markerline" ] && [ -n "$execline" ] && [ "$markerline" -lt "$execline" ]
 }
 
+# === auto_update LOKAL COMMITLARNI o'chirmasin ==============================
+# HAQIQIY HODISA: `auto_update` `git reset --hard FETCH_HEAD` qiladi. Ishchi
+# daraxt toza bo'lsa (ya'ni hamma narsa COMMIT QILINGAN), yuqoridagi
+# `git status --porcelain` to'sig'i o'tib ketadi — va push qilinmagan lokal
+# commitlar izsiz yo'qoladi. ~/.ai-cli bir vaqtda ham o'rnatish papkasi, ham
+# git ish papkasi bo'lgani uchun bu shu loyihada ishlaydiganlarga tegadi.
+@test "auto_update: fast-forward bo'lmasa reset QILMAYDI" {
+  local body
+  body="$(awk '/^auto_update\(\) \{/{f=1} f{print} f&&/^\}$/{exit}' "$SELECTOR")"
+  # Ajdodlik tekshiruvi bo'lishi SHART.
+  printf '%s\n' "$body" | grep -qE 'merge-base --is-ancestor'
+  # Va u reset'dan OLDIN kelishi kerak (izohlarni hisobga olmay).
+  local guard reset
+  guard="$(printf '%s\n' "$body" | grep -nE '^[^#]*merge-base --is-ancestor' | head -1 | cut -d: -f1)"
+  reset="$(printf '%s\n' "$body" | grep -nE '^[^#]*reset --hard' | head -1 | cut -d: -f1)"
+  [ -n "$guard" ] && [ -n "$reset" ] && [ "$guard" -lt "$reset" ]
+}
+
+@test "auto_update: lokal commit bo'lsa yangilashni o'tkazib yuboradi" {
+  load_selector
+  unset AIDEVIX_NO_AUTOUPDATE CI
+  # Ikki repo: "masofaviy" (origin) va undan klonlangan lokal.
+  local remote="$BATS_TEST_TMPDIR/remote" work="$BATS_TEST_TMPDIR/work"
+  git init -q --bare "$remote"
+  # Bare repo HEAD'ini `main` ga qaratamiz — aks holda klon bo'sh (unborn)
+  # tarmoqda qoladi va keyingi push non-fast-forward bo'lib yiqiladi.
+  git -C "$remote" symbolic-ref HEAD refs/heads/main
+  git init -q "$work"
+  # Lokal tarmoq ham AYNAN `main` bo'lishi shart: auto_update joriy tarmoq nomi
+  # bilan fetch qiladi. `master` bo'lib qolsa fetch yiqiladi va funksiya
+  # tekshiruvga YETMASDAN chiqib ketadi — test BEKOR bo'lardi (yashil, lekin
+  # hech narsani isbotlamaydi).
+  git -C "$work" symbolic-ref HEAD refs/heads/main
+  git -C "$work" config user.email t@t; git -C "$work" config user.name t
+  printf 'v1\n' > "$work/VERSION"
+  git -C "$work" add -A; git -C "$work" commit -qm base
+  git -C "$work" remote add origin "$remote"
+  git -C "$work" push -q origin HEAD:main
+
+  # Masofada YANGI commit (yangilanish bor).
+  local clone="$BATS_TEST_TMPDIR/clone"
+  git clone -q "$remote" "$clone"
+  git -C "$clone" config user.email t@t; git -C "$clone" config user.name t
+  git -C "$clone" checkout -q -B main origin/main
+  printf 'v2\n' > "$clone/VERSION"
+  git -C "$clone" add -A; git -C "$clone" commit -qm upstream
+  git -C "$clone" push -q origin HEAD:main
+
+  # Lokalda esa PUSH QILINMAGAN o'z commitimiz bor — daraxt TOZA.
+  printf 'mening ishim\n' > "$work/MYWORK.txt"
+  git -C "$work" add -A; git -C "$work" commit -qm "lokal ish"
+  local mine; mine="$(git -C "$work" rev-parse HEAD)"
+  [ -z "$(git -C "$work" status --porcelain)" ]   # daraxt toza (eski to'siq o'tadi)
+
+  PROJECT_ROOT="$work" STATE_DIR="$BATS_TEST_TMPDIR/st" run auto_update
+  [ "$status" -eq 0 ]
+  # HIMOYAGA YETIB BORGANINI isbotlaydi: aynan shu ogohlantirish chiqishi kerak.
+  # Busiz test "bekor" bo'lishi mumkin edi — funksiya boshqa sababga ko'ra
+  # erta chiqib ketsa ham commit joyida qolardi va test yashil bo'lardi.
+  [[ "$output" == *"push qilinmagan lokal commitlar"* \
+     || "$output" == *"local commits that were never pushed"* ]]
+  # ENG MUHIMI: commitimiz JOYIDA qolgan.
+  [ "$(git -C "$work" rev-parse HEAD)" = "$mine" ]
+  [ -f "$work/MYWORK.txt" ]
+}
+
 # === 4. Menyu kadri BITTA yozuv bilan chiziladi ==============================
 # Miltillashning sababi: kadr har qator uchun alohida `printf` bilan
 # `/dev/tty` ga yozilardi (bitta kadr = 25-30 write). Endi bufer + DECSET 2026.

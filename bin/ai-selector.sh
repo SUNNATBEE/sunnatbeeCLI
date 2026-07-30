@@ -2777,6 +2777,22 @@ auto_update() {
   remote_sha="$("${g[@]}" rev-parse FETCH_HEAD 2>/dev/null || true)"
   [[ -n "$local_sha" && -n "$remote_sha" && "$local_sha" != "$remote_sha" ]] || return 0
 
+  # LOKAL COMMITLARNI YO'Q QILMAYMIZ. Quyidagi `git reset --hard FETCH_HEAD`
+  # FAQAT fast-forward bo'lganda xavfsiz — ya'ni HEAD masofaviy commit'ning
+  # AJDODI bo'lsa. Aks holda foydalanuvchida push qilinmagan LOKAL COMMITlar
+  # bor va reset ularni butunlay o'chirib yuboradi (reflog'dan tashqari izsiz).
+  #
+  # Yuqoridagi `git status --porcelain` tekshiruvi bundan HIMOYA QILMAYDI: u
+  # faqat commit QILINMAGAN o'zgarishlarni ko'radi. Commit qilingan, ammo hali
+  # push qilinmagan ish uchun ishchi daraxt TOZA ko'rinadi — va yo'q bo'ladi.
+  # Bu shu repoda ishlaydiganlar uchun real xavf, chunki ~/.ai-cli bir vaqtning
+  # o'zida ham o'rnatish papkasi, ham git ish papkasi.
+  if ! "${g[@]}" merge-base --is-ancestor "$local_sha" "$remote_sha" 2>/dev/null; then
+    log_warn "$(t "Avtomatik yangilash o'tkazib yuborildi: %s da push qilinmagan lokal commitlar bor." "$PROJECT_ROOT")"
+    log_info "$(t "Ishingizni saqlang (git push), so'ng qo'lda yangilang: git pull --rebase")"
+    return 0
+  fi
+
   printf '\n  %s%s%s%s\n' \
     "${C_BOLD:-}" "${C_TITLE:-}" "$(t '🔄 Aidevix CLI — yangi versiya topildi, yangilanmoqda...')" "${C_RESET:-}" >&2
   local subj

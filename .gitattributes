@@ -11,6 +11,14 @@
 *.cmd       text eol=crlf
 *.bat       text eol=crlf
 
+# VERSION va bats testlari — HAR DOIM LF. `core.autocrlf=true` bo'lgan
+# Windows'da VERSION CRLF bilan checkout qilinsa, skript versiyani "X.Y.Z\r"
+# deb o'qiydi va versiya taqqoslash buziladi (CLI o'zini eski deb bilib,
+# yangilashni to'xtovsiz taklif qiladi). Skript o'zi ham CR ni tozalaydi —
+# bu ikkinchi mudofaa qatlami.
+VERSION     text eol=lf
+*.bats      text eol=lf
+
 # Hujjatlar
 *.md        text
 LICENSE     text

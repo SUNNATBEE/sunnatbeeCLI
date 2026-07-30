@@ -37,7 +37,16 @@ PROJECT_ROOT="$(cd -P "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
 SELF="$SCRIPT_DIR/$(basename "$SCRIPT_SOURCE")"
 
 # Versiya — VERSION faylidan o'qiladi (bo'lmasa quyidagi zaxira qiymat).
+#
+# CR/bo'shliqlar ATAYLAB tozalanadi. Sabab: Windows'da `core.autocrlf=true`
+# bo'lganda git VERSION faylini CRLF bilan checkout qiladi, zip/tahrirlovchi ham
+# CR qo'shib qo'yishi mumkin. Natijada versiya "1.9.2\r" bo'lib qoladi va
+# `version_gt` da oxirgi bo'lak (`2\r`) RAQAM emas deb topilib 0 sanaladi —
+# ya'ni CLI o'zini haqiqiydan ESKI deb biladi va yangilashni to'xtovsiz
+# taklif qiladi. Bir ko'rinmas belgi — buzilgan tarqatish kanali.
 AIDEVIX_VERSION="$(cat "$PROJECT_ROOT/VERSION" 2>/dev/null || echo "1.0.0")"
+AIDEVIX_VERSION="${AIDEVIX_VERSION//[$'\r\n\t ']/}"     # forksiz, sof bash
+[[ -n "$AIDEVIX_VERSION" ]] || AIDEVIX_VERSION="1.0.0"
 
 # Repo config — ASOSIY ro'yxat (git orqali doimo yangilanadi).
 # Foydalanuvchi config — faqat o'zi qo'shgan QO'SHIMCHA agentlar.

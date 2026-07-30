@@ -61,6 +61,42 @@ setup() {
   [ "$vfile" = "$pjson" ]
 }
 
+# --- CR (CRLF) himoyasi ------------------------------------------------------
+# Windows'da `core.autocrlf=true` VERSION ni CRLF bilan checkout qiladi (bu
+# faylga .gitattributes qoidasi YO'Q edi). CR versiyada qolsa `version_gt`
+# oxirgi bo'lakni ("2\r") raqam emas deb 0 sanaydi → CLI o'zini ESKI deb
+# biladi → yana cheksiz yangilash taklifi.
+#
+# DIQQAT — nima uchun bu yerda "CR taqqoslashni buzadi" degan test YO'Q:
+# u PLATFORMAGA bog'liq bo'lib chiqdi. Git for Windows (MSYS) bash'i so'zlarga
+# bo'lishda oxiridagi CR ni o'zi jimgina tashlab yuboradi (`igncr` o'chiq
+# bo'lsa ham), MSYS `cat` ham CRLF ni LF ga aylantiradi — ya'ni Windows'da
+# buzilish KO'RINMAYDI, Linux/macOS'da esa maydon "2\r" bo'lib qoladi va
+# `version_gt` uni raqam emas deb 0 sanaydi. Shunday testni yozsak, u shu
+# mashinada YIQILARDI (buzilishni ko'rsata olmagani uchun) — foydasi yo'q.
+# Shuning uchun MEXANIZMni sinaymiz: tozalash ifodasi CR ni olib tashlaydimi,
+# skriptda o'sha himoya bormi va .gitattributes qoidasi joyidami.
+@test "version_gt: tozalangandan keyin to'g'ri taqqoslaydi" {
+  load_selector
+  local raw="1.9.2"$'\r' clean
+  clean="${raw//[$'\r\n\t ']/}"          # ai-selector.sh dagi AYNAN shu ifoda
+  [ "$clean" = "1.9.2" ]
+  run version_gt "$clean" "1.9.1"
+  [ "$status" -eq 0 ]
+  # Teng versiyalar — yangilash TAKLIF QILINMAYDI (halqa yo'q).
+  run version_gt "$clean" "1.9.2"
+  [ "$status" -ne 0 ]
+}
+
+@test "AIDEVIX_VERSION: o'qilgandan keyin CR/bo'shliq tozalanadi" {
+  # Himoya skriptdan olib tashlansa shu test yiqiladi.
+  grep -qE 'AIDEVIX_VERSION="\$\{AIDEVIX_VERSION//\[\$.\\r\\n\\t .\]/\}"' "$SELECTOR"
+}
+
+@test ".gitattributes: VERSION har doim LF bilan checkout qilinadi" {
+  grep -qE '^VERSION[[:space:]]+text[[:space:]]+eol=lf' "$PROJECT_ROOT/.gitattributes"
+}
+
 @test "check-version-sync.js: nomuvofiqlikda publish'ni to'xtatadi (exit 1)" {
   # Reponing nusxasi: package.json'ni buzamiz va skript YIQITISHI kerak.
   local sandbox="$BATS_TEST_TMPDIR/relcheck"

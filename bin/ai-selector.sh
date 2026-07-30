@@ -170,7 +170,7 @@ cleanup() {
   show_cursor
   # Ichki menyu avto-o'rash/alt-screen'ni o'zgartirgan bo'lishi mumkin — har
   # ehtimolga tiklaymiz (alt-screen'da bo'lmasak \033[?1049l zararsiz no-op).
-  [[ "${UI_TTY:-0}" -eq 1 ]] && printf '\033[?7h\033[?1007l\033[?1049l' >&2 2>/dev/null || true
+  [[ "${UI_TTY:-0}" -eq 1 ]] && printf '\033[?2026l\033[?7h\033[?1007l\033[?1049l' >&2 2>/dev/null || true
   local f
   for f in ${TMPFILES[@]+"${TMPFILES[@]}"}; do rm -f "$f" 2>/dev/null || true; done
 }
@@ -187,7 +187,7 @@ on_interrupt() {
   INTERRUPTED=1
   trap - INT TERM
   restore_tty_state
-  printf '\033[?1007l\033[?25h\033[?7h\033[?1049l' >&2 2>/dev/null || true
+  printf '\033[?2026l\033[?1007l\033[?25h\033[?7h\033[?1049l' >&2 2>/dev/null || true
   ui_spin_stop 2>/dev/null || true
   local what
   case "$AIDEVIX_PHASE" in
@@ -216,7 +216,7 @@ crash() {
   # matni ALTERNATE ekranga chiziladi, so'ng ekran tiklanganda u O'CHIB ketadi —
   # "hech qanday xato ko'rsatmasdan yopildi" shikoyatining sababi aynan shu.
   # Ketma-ketlik idempotent: alt-screen ochilmagan bo'lsa ham zararsiz.
-  printf '\033[?1007l\033[?25h\033[?7h\033[?1049l' 2>/dev/null >/dev/tty || true
+  printf '\033[?2026l\033[?1007l\033[?25h\033[?7h\033[?1049l' 2>/dev/null >/dev/tty || true
   log_error "$(t "Kutilmagan xato: %s (qator: %s)" "$cmd" "$line")"
   # AIDEVIX_DEBUG=1 — chaqiruvlar stegi (bug-report uchun). Std: ko'rsatilmaydi.
   if [[ -n "${AIDEVIX_DEBUG:-}" ]]; then
@@ -1844,9 +1844,21 @@ select_with_arrows() {
       for L in "${out[@]}"; do printf '%s\n' "$L"; done
       return 0
     fi
-    printf '\033[H' >/dev/tty
-    local L
-    for L in "${out[@]}"; do printf '\r\033[K%s\n' "$L" >/dev/tty; done
+    # BITTA yozuv (write) bilan chizamiz. Ilgari har qator ALOHIDA printf bilan
+    # ketardi — ya'ni bitta kadr = 25-30 ta write(). Windows konsolida terminal
+    # har bo'lakni DARHOL chizadi, natijada strelka bilan yurganda ro'yxat
+    # "qatorma-qator qayta chizilayotgandek" miltillardi. Endi butun kadr
+    # buferga yig'iladi va bir marta yuboriladi.
+    #
+    # \033[?2026h/l — SINXRON CHIQISH (DECSET 2026): terminal kadr to'liq
+    # kelmaguncha ekranni yangilamaydi, ya'ni yarim chizilgan holat ko'rinmaydi.
+    # Rejimni bilmaydigan terminal buni jimgina e'tiborsiz qoldiradi (zararsiz).
+    # \033[J — kadr oxirida pastda qolgan eski qatorlarni tozalaydi (terminal
+    # kichrayganda ular "arvoh" bo'lib qolardi).
+    local L frame=$'\033[?2026h\033[H'
+    for L in "${out[@]}"; do frame+=$'\r\033[K'"$L"$'\n'; done
+    frame+=$'\033[J\033[?2026l'
+    printf '%s' "$frame" >/dev/tty
   }
 
   # --- TEST SEAM: bitta kadrni chizib chiqish -------------------------------
@@ -1881,7 +1893,7 @@ select_with_arrows() {
   # ishlatiladi (idempotent).
   _menu_restore() {
     stty "$_savedstty" 2>/dev/null </dev/tty || true
-    printf "\033[?1007l\033[?25h\033[?7h\033[?1049l" 2>/dev/null >/dev/tty || true
+    printf "\033[?2026l\033[?1007l\033[?25h\033[?7h\033[?1049l" 2>/dev/null >/dev/tty || true
   }
   trap '_menu_restore' EXIT
   # INT/TERM ALOHIDA kerak: bu funksiya `$(...)` qism-qobig'ida ishlaydi va
@@ -2030,7 +2042,10 @@ select_with_arrows() {
   # ALT-SCREEN'dan chiqamiz — asosiy ekran (banner va h.k.) o'z holicha qaytadi,
   # menyu izsiz yo'qoladi. TTY rejimi va kursor/o'rash tiklanadi.
   stty "$_savedstty" 2>/dev/null </dev/tty || true
-  printf '\033[?1007l\033[?25h\033[?7h\033[?1049l' >/dev/tty
+  # \033[?2026l ENG OLDIN: agar terminal sinxron-chiqish rejimida qolib ketgan
+  # bo'lsa (kadr chizilayotganda uzilish), qolgan tiklash ketma-ketligi umuman
+  # ko'rinmaydi. Shuning uchun avval rejimni yopamiz, keyin qolganini tiklaymiz.
+  printf '\033[?2026l\033[?1007l\033[?25h\033[?7h\033[?1049l' >/dev/tty
 
   if (( cancelled )); then
     log_info "$(t 'Bekor qilindi.')"
@@ -2779,6 +2794,14 @@ status_latency_field() {
 npm_autoupdate_apply() {
   AIDEVIX_PHASE="update"
   local latest="$1"; shift
+  # HALQA (loop) KAFOLATI: bu exec-zanjirida yangilash BIR MARTA taklif qilinadi.
+  # Sabab — real hodisa: npm'dagi paketda `package.json` versiyasi ko'tarilgan,
+  # lekin ichidagi `VERSION` fayli eski qolgan edi. Natijada `npm i -g` muvaffaqiyatli
+  # tugasa ham qayta ishga tushgan skript O'ZINI yana eski deb bilib, yana yangilashni
+  # taklif qilardi — foydalanuvchi cheksiz "[Y/n]" halqasiga tushib qolardi.
+  # Endi marker (exec orqali o'tadi) borligida darhol 1 qaytaramiz: chaqiruvchi
+  # passiv eslatmaga/tashxis paneliga tushadi va menyu normal ochiladi.
+  [[ -n "${AIDEVIX_UPDATE_ATTEMPTED:-}" ]] && return 1
   local ans="" q
   q="$(t '🔄 Yangi versiya bor (%s → %s). Hozir avtomatik yangilaymizmi? [Y/n] ' "$AIDEVIX_VERSION" "$latest")"
   # TTY o'qishidan oldin ERR-tutqichni vaqtincha o'chiramiz (prompt_tty kabi).
@@ -2797,7 +2820,7 @@ npm_autoupdate_apply() {
   esac
   log_info "$(t 'Yangilanmoqda: npm i -g %s@latest …' "$NPM_PKG")"
   if npm i -g "$NPM_PKG@latest" </dev/null; then
-    log_ok "$(t 'Yangilandi (%s). Qayta ishga tushmoqda…' "$latest")"
+    log_success "$(t 'Yangilandi (%s). Qayta ishga tushmoqda…' "$latest")"
     # `exec bash "$SELF"` — `exec "$0"` EMAS. Ikki sabab:
     #   1) npm orqali chaqirilganda $0 Windows uslubidagi yo'l bo'lishi mumkin
     #      (`C:\...\ai-selector.sh`, bin/cli.js shunday uzatadi) — uni to'g'ridan
@@ -2807,6 +2830,10 @@ npm_autoupdate_apply() {
     #      bilan boshlagan ma'qul. auto_update ham xuddi shunday qiladi.
     trap - ERR
     cleanup 2>/dev/null || true
+    # Marker: qaysi versiyadan yangilaganimizni yangi jarayonga uzatamiz. Yangi
+    # jarayon o'zini YANA eski deb bilsa (paket buzuq), bu marker orqali halqaga
+    # tushmasdan aniq tashxis ko'rsatadi.
+    export AIDEVIX_UPDATE_ATTEMPTED="$AIDEVIX_VERSION"
     exec bash "$SELF" "$@"                      # yangilangan versiya bilan qayta start
   fi
   log_warn "$(t "Avtomatik yangilab bo'lmadi. Qo'lda: npm i -g %s@latest" "$NPM_PKG")"
@@ -2827,6 +2854,21 @@ maybe_npm_update_hint() {
   local latest; latest="$(cat "$NPM_LATEST_CACHE" 2>/dev/null || true)"
   [[ "$latest" =~ ^[0-9]+\.[0-9]+ ]] || return 0
   version_gt "$latest" "$AIDEVIX_VERSION" || return 0
+
+  # YANGILANDI, LEKIN VERSIYA O'ZGARMADI. `npm i -g` muvaffaqiyatli tugadi, qayta
+  # ishga tushdik — va biz hamon o'zimizni eski deb bilamiz. Bu foydalanuvchining
+  # xatosi EMAS: registry'dagi paketda `package.json` versiyasi bilan ichidagi
+  # `VERSION` fayli mos kelmaydi (yoki `npm -g` boshqa prefix'ga o'rnatgan).
+  # Yana so'ramaymiz — sababni aytamiz va menyuni ochamiz.
+  if [[ "${AIDEVIX_UPDATE_ATTEMPTED:-}" == "$AIDEVIX_VERSION" ]]; then
+    ui_notice warn \
+      "$(t "Yangilash o'rnatildi, lekin versiya hamon %s (kutilgan: %s)." "$AIDEVIX_VERSION" "$latest")" \
+      "$(t "Sabab: npm'dagi paket ichidagi VERSION fayli eskirgan yoki 'npm -g' boshqa joyga o'rnatdi.")" \
+      "$(t 'Tekshirish:')" \
+      "    npm ls -g --depth=0 $NPM_PKG" \
+      "$(t 'Eslatmani o'\''chirish: AIDEVIX_NO_AUTOUPDATE=1')"
+    return 0
+  fi
 
   # Interaktiv sessiya + npm bor → yangilashni TAKLIF qilamiz (tasdiqlasa exec).
   # Tasdiqlanib yangilansa, apply qaytmaydi (exec). Rad etilsa 1 qaytaradi →

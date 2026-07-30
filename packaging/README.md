@@ -17,6 +17,33 @@ tushiradi (Windows'da Git Bash). Nashr:
 npm publish          # "aidevix" nomi band bo'lsa: @sunnatbee/aidevix
 ```
 
+### ⛔ `npm publish` FAQAT repo ildizidan
+
+Publish qilishdan oldin **qaysi papkada turganingizni** tekshiring:
+
+```bash
+pwd                  # .../sunnatbeeCLI  (repo ildizi) bo'lishi SHART
+git status           # toza va to'g'ri teg/commit'da turibmi?
+npm run version:check
+```
+
+**Nima uchun bu muhim (v1.9.1 hodisasi):** paket bir marta xato papkadan —
+`~/AppData/Roaming/npm/node_modules/aidevix` (ya'ni O'RNATILGAN eski nusxadan) —
+publish qilingan. Natijada registry'ga `package.json` = 1.9.1, lekin ichidagi
+`VERSION` = 1.7.4 va **1.7.5 ning kodi** bo'lgan paket chiqdi. CLI o'z
+versiyasini `VERSION` faylidan o'qiydi, shuning uchun yangilangandan keyin ham
+o'zini eski deb bilib, foydalanuvchini cheksiz "yangilaymizmi? [Y/n]" halqasiga
+tushirdi.
+
+Endi `prepack` (ya'ni `npm publish` va `npm pack`) `scripts/check-version-sync.js`
+ni ishga tushiradi va `VERSION` bilan `package.json` mos kelmasa publish'ni
+**to'xtatadi**. O'rnatilgan nusxadan publish qilishga urinilsa ham shu bosqich
+yiqiladi (u nusxada `scripts/` yo'q) — bu ataylab shunday.
+
+> ⚠️ Chiqarilgan versiyani QAYTA publish qilish mumkin emas (npm ruxsat
+> bermaydi) — buzuq reliz chiqsa, keyingi patch versiyani chiqarish va eskisini
+> `npm deprecate` bilan belgilash kerak.
+
 > ⚠️ npm orqali ishga tushganda `.git` bo'lmaydi — avtomatik yangilanish jim
 > o'tkazib yuboriladi. Yangilash: `npm update -g aidevix`.
 

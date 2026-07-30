@@ -1,6 +1,6 @@
 {
   "name": "aidevix",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "One command, 28+ top AI CLIs. An interactive launcher that lists, installs and runs terminal AI coding agents (Claude Code, Codex, Gemini, Aider, Ollama, and more). English & Uzbek UI.",
   "keywords": [
     "ai",
@@ -50,6 +50,8 @@
   ],
   "scripts": {
     "test": "bats tests/",
+    "version:check": "node scripts/check-version-sync.js",
+    "prepack": "node scripts/check-version-sync.js",
     "postinstall": "node bin/postinstall.js"
   }
 }

@@ -7,6 +7,42 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.9.2] — 2026-07-30
+
+### Tuzatildi
+- **Cheksiz "yangilaymizmi?" halqasi (npm).** `npm i -g aidevix@latest`
+  muvaffaqiyatli tugagandan keyin ham CLI o'zini eski deb bilib, yangilashni
+  QAYTA-QAYTA taklif qilardi — foydalanuvchi menyuga umuman kira olmasdi.
+  Sabab: npm'ga chiqarilgan **1.9.1 paketida `package.json` = 1.9.1, lekin
+  ichidagi `VERSION` fayli 1.7.4** bo'lib qolgan (paket noto'g'ri papkadan
+  publish qilingan). Skript o'z versiyasini AYNAN `VERSION` faylidan o'qiydi,
+  registry esa `package.json`ni ko'rsatadi — natijada taqqoslash hech qachon
+  tenglashmasdi. Uch qatlamli tuzatish:
+  1. Paket to'g'ri repodan qayta chiqarildi (`VERSION` = `package.json` = 1.9.2);
+  2. `npm publish`/`npm pack` endi `prepack` orqali versiyalarni SOLISHTIRADI
+     va nomuvofiqlikda publish'ni TO'XTATADI
+     (`scripts/check-version-sync.js`, `npm run version:check`);
+  3. Kod tomonida HALQA KAFOLATI: yangilash bir exec-zanjirida faqat BIR MARTA
+     taklif qilinadi (`AIDEVIX_UPDATE_ATTEMPTED` markeri, exec orqali o'tadi).
+     Yangilangandan keyin versiya o'zgarmasa — halqa emas, aniq TASHXIS
+     ko'rsatiladi (`npm ls -g --depth=0 aidevix`) va menyu normal ochiladi.
+- **`log_ok: command not found`** — yangilashdan keyingi xato xabari. Aslida
+  funksiya nomi `log_success`; `log_ok` hech qachon aniqlanmagan edi
+  (`npm_autoupdate_apply`). Regressiya to'sig'i qo'shildi: yetkazib beriladigan
+  skriptlardagi HAR BIR `log_*` chaqiruvi `lib/common.sh` da aniqlangan
+  bo'lishi tekshiriladi (`tests/release_integrity.bats`) — bu to'siq buzuq
+  relizdagi `log_ok` ni ham aniqlaydi.
+
+### O'zgardi
+- **Menyu miltillashi (strelka ↑/↓) bartaraf etildi.** Ilgari bitta kadr
+  25-30 ta alohida `printf` bilan `/dev/tty` ga yozilardi — Windows konsoli har
+  bo'lakni darhol chizgani uchun ro'yxat "qatorma-qator qayta chizilayotgandek"
+  ko'rinardi. Endi butun kadr buferga yig'ilib BITTA yozuv bilan yuboriladi va
+  **sinxron chiqish** (DECSET 2026) bilan o'raladi — terminal yarim chizilgan
+  holatni umuman ko'rsatmaydi. Rejimni bilmaydigan terminal buni jimgina
+  e'tiborsiz qoldiradi. Terminal tiklash yo'llari ham `\033[?2026l` bilan
+  yopiladi (kadr o'rtasida uzilish ekranni "muzlatib" qoldirmasin).
+
 ## [1.9.1] — 2026-07-29
 
 ### O'zgardi

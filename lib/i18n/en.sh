@@ -390,3 +390,4 @@ MSG_EN["AIDEVIX_NO_AUTOUPDATE=1 bilan O'CHIRILGAN"]="DISABLED via AIDEVIX_NO_AUT
 MSG_EN["Yangilash o'rnatildi, lekin versiya hamon %s (kutilgan: %s)."]="The update installed, but the version is still %s (expected: %s)."
 MSG_EN["Sabab: npm'dagi paket ichidagi VERSION fayli eskirgan, yoki PATH'da BOSHQA nusxa oldinda turibdi."]="Cause: the VERSION file inside the npm package is stale, or ANOTHER copy comes first in PATH."
 MSG_EN["Aniqlash (barcha nusxalarni ko'rsatadi):"]="Diagnose (lists every copy):"
+MSG_EN["Tekshirish:"]="Verify:"

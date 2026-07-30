@@ -7,6 +7,31 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.9.3] — 2026-07-30
+
+### Tuzatildi
+- **`VERSION` faylidagi CR (CRLF) versiyani buzardi.** Bu faylga
+  `.gitattributes` qoidasi yo'q edi, `core.autocrlf=true` bo'lgan Windows'da
+  esa git uni CRLF bilan checkout qiladi. Natijada versiya `X.Y.Z\r` bo'lib
+  o'qilardi va `version_gt` oxirgi bo'lakni (`2\r`) raqam emas deb 0 sanardi —
+  ya'ni CLI o'zini haqiqiydan ESKI deb bilib, yangilashni to'xtovsiz taklif
+  qilardi (1.9.2 da tuzatilgan halqa bilan bir turkumdagi nuqson, lekin
+  boshqa sabab). Ikki qatlamli himoya: `.gitattributes` da
+  `VERSION text eol=lf`, va skript o'qilgandan keyin CR/bo'shliqni forksiz
+  tozalaydi.
+  > Platformaga oid nozik jihat: Git for Windows bash'i so'zlarga bo'lishda
+  > oxirgi CR ni o'zi tashlab yuboradi (`igncr` o'chiq bo'lsa ham), MSYS `cat`
+  > ham CRLF ni LF ga aylantiradi — shuning uchun buzilish **Linux/macOS** da
+  > ko'rinadi, Windows'da esa yashirin qolgan edi.
+
+### Eslatma
+- **1.9.2 npm'ga chiqarilmadi** (git tegi va GitHub Release'i bor). Yuqoridagi
+  tuzatish teg qo'yilgandan keyin topilgani uchun npm'ga to'g'ridan-to'g'ri
+  1.9.3 chiqarildi — shu tariqa npm paketi `v1.9.3` tegi bilan AYNAN mos
+  keladi. Chiqarilgan tegni "ko'chirish" ATAYLAB qilinmadi: bu butun
+  hodisaning sababi bo'lgan "e'lon qilingan artefakt manba bilan mos emas"
+  holatini yana keltirib chiqarardi.
+
 ## [1.9.2] — 2026-07-30
 
 ### Tuzatildi

@@ -2983,7 +2983,9 @@ maybe_npm_update_hint() {
   if [[ "${AIDEVIX_UPDATE_ATTEMPTED:-}" == "$AIDEVIX_VERSION" ]]; then
     ui_notice warn \
       "$(t "Yangilash o'rnatildi, lekin versiya hamon %s (kutilgan: %s)." "$AIDEVIX_VERSION" "$latest")" \
-      "$(t "Sabab: npm'dagi paket ichidagi VERSION fayli eskirgan yoki 'npm -g' boshqa joyga o'rnatdi.")" \
+      "$(t "Sabab: npm'dagi paket ichidagi VERSION fayli eskirgan, yoki PATH'da BOSHQA nusxa oldinda turibdi.")" \
+      "$(t "Aniqlash (barcha nusxalarni ko'rsatadi):")" \
+      "    aidevix --doctor" \
       "$(t 'Tekshirish:')" \
       "    npm ls -g --depth=0 $NPM_PKG" \
       "$(t 'Eslatmani o'\''chirish: AIDEVIX_NO_AUTOUPDATE=1')"

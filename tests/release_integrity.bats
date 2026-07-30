@@ -107,6 +107,46 @@ EOF
   [ -z "$output" ]                       # prompt ham chiqmaydi
 }
 
+@test "npm_autoupdate_apply: exec'dan OLDIN markerni EXPORT qiladi" {
+  # Marker exec orqali yangi jarayonga o'tishi shart — aks holda halqa
+  # kafolati ishlamaydi (yangi jarayon markerni ko'rmaydi).
+  local body markerline execline
+  body="$(awk '/^npm_autoupdate_apply\(\) \{/{f=1} f{print} f&&/^\}$/{exit}' "$SELECTOR")"
+  printf '%s\n' "$body" | grep -qE 'export AIDEVIX_UPDATE_ATTEMPTED='
+  # `^[^#]*` — izohlarni chetlab o'tadi: `exec bash "$SELF"` funksiya ichidagi
+  # IZOHDA ham uchraydi, uni haqiqiy chaqiruv deb olsak tartib xato hisoblanadi.
+  markerline="$(printf '%s\n' "$body" | grep -nE '^[^#]*export AIDEVIX_UPDATE_ATTEMPTED=' | head -1 | cut -d: -f1)"
+  execline="$(printf '%s\n' "$body" | grep -nE '^[^#]*exec bash "\$SELF"' | head -1 | cut -d: -f1)"
+  [ -n "$markerline" ] && [ -n "$execline" ] && [ "$markerline" -lt "$execline" ]
+}
+
+# === 4. Menyu kadri BITTA yozuv bilan chiziladi ==============================
+# Miltillashning sababi: kadr har qator uchun alohida `printf` bilan
+# `/dev/tty` ga yozilardi (bitta kadr = 25-30 write). Endi bufer + DECSET 2026.
+@test "menyu kadri: bitta printf, sinxron chiqish (DECSET 2026) ichida" {
+  local body
+  body="$(awk '/^select_with_arrows\(\) \{/{f=1} f{print} f&&/^\}$/{exit}' "$SELECTOR")"
+  # Kadr buferga yig'iladi va bir marta yuboriladi.
+  printf '%s\n' "$body" | grep -qE 'frame\+='
+  printf '%s\n' "$body" | grep -qE "printf '%s' \"\\\$frame\" >/dev/tty"
+  # Sinxron chiqish ochiladi VA yopiladi.
+  printf '%s\n' "$body" | grep -q '2026h'
+  printf '%s\n' "$body" | grep -q '2026l'
+  # Ilgarigi qatorma-qator yozuv QAYTMASIN.
+  ! printf '%s\n' "$body" | grep -qE "for L in .*do printf '\\\\r\\\\033\[K%s\\\\n' \"\\\$L\" >/dev/tty"
+}
+
+@test "terminalni tiklash: sinxron chiqish rejimi ham yopiladi" {
+  # Kadr o'rtasida uzilish bo'lsa terminal 2026 rejimida qolib, EKRAN
+  # MUZLAB qolardi. Har bir tiklash ketma-ketligi 2026l ni ham yuborishi kerak.
+  # Faqat HAQIQIY chiqarish qatorlari (printf), izohlar emas.
+  local n_restore n_2026
+  n_restore="$(grep -cE '^[^#]*printf.*1049l' "$SELECTOR")"
+  n_2026="$(grep -cE '^[^#]*printf.*2026l.*1049l' "$SELECTOR")"
+  [ "$n_restore" -gt 0 ]
+  [ "$n_restore" -eq "$n_2026" ]
+}
+
 @test "maybe_npm_update_hint: yangilanib versiya o'zgarmasa TASHXIS beradi" {
   load_selector
   unset AIDEVIX_NO_AUTOUPDATE CI

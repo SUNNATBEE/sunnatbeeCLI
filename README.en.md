@@ -4,7 +4,7 @@
 
 # ✦ Aidevix CLI
 
-### *One command. 28 top AI CLIs. Endless possibilities.*
+### *One command. 37 top AI CLIs. Endless possibilities.*
 
 Type `aidevix` → pick from the list → the CLI launches automatically.
 Not installed yet? It installs itself. 🪄
@@ -64,7 +64,7 @@ interactive menu. Works in `bash`, `zsh`, `cmd` and `PowerShell`.
 |---|---|---|
 | 🎨 | **Polished design** | AD logo + gradient banner, live **spinner** animation, colored preview — clean and modern |
 | ⚡ | **One-command install** | `curl ... \| bash` — the rest is automatic |
-| 🎛️ | **A single `aidevix` menu** | 28 top AI CLIs in one interactive list (status + preview) |
+| 🎛️ | **A single `aidevix` menu** | 37 top AI CLIs in one interactive list (status + preview) |
 | 🪄 | **Auto-install** | If the chosen CLI is missing, it asks for permission and installs it |
 | 🔐 | **Login guidance** | Shows which login/API key each agent needs; keys are never stored |
 | 🚀 | **Quick launch** | `aidevix claude` — straight to the agent, no menu |

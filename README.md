@@ -4,7 +4,7 @@
 
 # ✦ Aidevix CLI
 
-### *Bitta buyruq. 28 ta top AI CLI. Cheksiz imkoniyat.*
+### *Bitta buyruq. 37 ta top AI CLI. Cheksiz imkoniyat.*
 
 `aidevix` deb yozing → ro'yxatdan tanlang → CLI avtomatik ishga tushadi.
 O'rnatilmagan bo'lsa — o'zi o'rnatadi. 🪄
@@ -45,7 +45,7 @@ O'rnatilmagan bo'lsa — o'zi o'rnatadi. 🪄
 
 ## 📖 Loyiha haqida
 
-**Aidevix CLI** — terminaldagi 28 ta top AI CLI agentini (Claude Code, Codex,
+**Aidevix CLI** — terminaldagi 37 ta top AI CLI agentini (Claude Code, Codex,
 Gemini, Copilot, Aider, Ollama va h.k.) yagona interaktiv menyu orqali bitta
 buyruq bilan boshqarish vositasi. `bash`, `zsh`, `cmd` va `PowerShell`'da ishlaydi.
 
@@ -67,7 +67,7 @@ buyruq bilan boshqarish vositasi. `bash`, `zsh`, `cmd` va `PowerShell`'da ishlay
 |---|---|---|
 | 🎨 | **Professional dizayn** | AD logosi + gradientli banner, jonli **spinner** animatsiyasi, rangli preview — toza va zamonaviy |
 | ⚡ | **Bir buyruq bilan o'rnatish** | `curl ... \| bash` — qolgani avtomatik |
-| 🎛️ | **Yagona `aidevix` menyusi** | 28 ta top AI CLI bitta interaktiv ro'yxatda (status + preview) |
+| 🎛️ | **Yagona `aidevix` menyusi** | 37 ta top AI CLI bitta interaktiv ro'yxatda (status + preview) |
 | 🪄 | **Avtomatik o'rnatish** | Tanlangan CLI yo'q bo'lsa — ruxsat so'rab o'zi o'rnatadi |
 | 🔐 | **Login yo'riqnomasi** | Har agent uchun qaysi login/API kalit kerakligi ko'rsatiladi; kalitlar saqlanmaydi |
 | 🚀 | **Tezkor ishga tushirish** | `aidevix claude` — menyusiz, to'g'ridan-to'g'ri |
@@ -667,7 +667,7 @@ aidevix-cli/
 │   ├── _aidevix          # zsh native completion
 │   └── aidevix.fish      # fish completion
 └── config/
-    └── agents.conf       # Agentlar ro'yxati (28 ta top AI CLI)
+    └── agents.conf       # Agentlar ro'yxati (37 ta top AI CLI)
 ```
 
 ---

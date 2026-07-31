@@ -11,9 +11,9 @@
 #        curl -fsSL <url> | shasum -a 256
 #      va quyiga qo'ying.
 class Aidevix < Formula
-  desc "One command, 28+ top AI CLIs — interactive launcher for terminal AI agents"
+  desc "One command, 37+ top AI CLIs — interactive launcher for terminal AI agents"
   homepage "https://github.com/SUNNATBEE/sunnatbeeCLI"
-  url "https://github.com/SUNNATBEE/sunnatbeeCLI/archive/refs/tags/v1.9.4.tar.gz"
+  url "https://github.com/SUNNATBEE/sunnatbeeCLI/archive/refs/tags/v1.10.0.tar.gz"
   sha256 "8839b287c2a4469fe5db16a0e48430f21534ce728ec4d84aaa5984d0a013a6e5"
   license "MIT"
   head "https://github.com/SUNNATBEE/sunnatbeeCLI.git", branch: "main"

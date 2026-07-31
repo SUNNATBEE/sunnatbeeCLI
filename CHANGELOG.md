@@ -7,6 +7,36 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.10.0] — 2026-07-31
+
+### Qo'shildi
+- **9 ta yangi AI CLI agenti — jami 28 → 37.**
+
+  | Agent | Buyruq | O'rnatish | Guruh |
+  |-------|--------|-----------|-------|
+  | Amp (Sourcegraph) | `amp` | `@ampcode/cli` | Coding |
+  | Auggie (Augment Code) | `auggie` | `@augmentcode/auggie` | Coding |
+  | Cody (Sourcegraph) | `cody` | `@sourcegraph/cody` | Coding |
+  | Forge | `forge` | `@antinomyhq/forge` | Coding |
+  | iFlow CLI | `iflow` | `@iflow-ai/iflow-cli` | Coding |
+  | Kimi CLI (Moonshot AI) | `kimi` | `pip kimi-cli` | Coding |
+  | Micro Agent (Builder.io) | `micro-agent` | `@builder.io/micro-agent` | Coding |
+  | gpt-engineer | `gpte` | `pip gpt-engineer` | Agent |
+  | Gorilla CLI (UC Berkeley) | `gorilla` | `pip gorilla-cli` | Chat |
+
+  Har bir yozuv **reyestrdan tekshirilgan**: paket mavjudligi, `bin` maydonidan
+  olingan ANIQ buyruq nomi va javob beradigan URL. Xotiradan yozilmagan —
+  noto'g'ri o'rnatish buyrug'i foydalanuvchida shunchaki ishlamaydi.
+  Tekshiruvda ikkita xato aniqlandi va tuzatildi: `@sourcegraph/amp` paketi
+  `@ampcode/cli` ga KO'CHIRILGAN (eskisi bilan yozilsa eskirgan nusxa
+  o'rnatilardi), `gpt-engineer` ning buyrug'i esa `gpt-engineer` emas, `gpte`.
+
+### Tuzatildi
+- **Gorilla CLI izohidagi 🦍 emoji `UI_EMOJI` jadvalida yo'q edi** — emoji
+  tozalash bosqichida u to'liq olib tashlanmay, ro'yxatda buzuq belgi
+  (`�`) qoldirardi. Jadvaldagi belgi bilan almashtirildi. Barcha 37 ta izoh
+  tozalashdan keyin tekshirildi.
+
 ## [1.9.4] — 2026-07-30
 
 ### Tuzatildi

@@ -1,6 +1,6 @@
 {
   "name": "aidevix",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "One command, 47+ top AI CLIs. An interactive launcher that lists, installs and runs terminal AI coding agents (Claude Code, Codex, Gemini, Aider, Ollama, and more). English & Uzbek UI.",
   "keywords": [
     "ai",

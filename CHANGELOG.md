@@ -7,8 +7,13 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.11.0] — 2026-08-01
+
 ### Qo'shildi
-- **🤖 17 yangi AI CLI agenti (v1.10.0 ustiga; jami 30 → 47).** Har biri qo'shishdan oldin
+- **🤖 10 ta yangi AI CLI agenti — v1.10.0 dagi 37 ustiga, jami 47.** (Ish
+  28 tadan boshlanib 17 ta qo'shilgan edi; ulardan 7 tasi — Amp, Auggie,
+  Forge, iFlow, Kimi, Micro Agent, gpt-engineer — v1.10.0 da ham bor ekan,
+  birlashtirishda bittadan qoldirildi.) Har biri qo'shishdan oldin
   paket reyestrida TEKSHIRILDI (npm `bin` maydoni / PyPI / o'rnatuvchi skript),
   ya'ni BINARY nomi ham, o'rnatish buyrug'i ham taxmin emas:
   - **Coding:** Amp (`@sourcegraph/amp`), Droid (Factory AI), Auggie
@@ -25,7 +30,7 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
     bog'liq yupqa qobiq (ikkalasi bir xil versiyada chiqadi), to'g'ridan-to'g'ri
     paket bitta bosqichni kamaytiradi.
   - `--top` ro'yxatiga `amp` va `droid` qo'shildi; barcha yangi izoh/auth
-    matnlari `lib/i18n/en.sh` ga tarjima qilindi (bepul agentlar: 11 → 21).
+    matnlari `lib/i18n/en.sh` ga tarjima qilindi (bepul agentlar: 22 ta).
 - **`go install` qo'llab-quvvatlanadi** — `detect_install_tool` endi "go"ni
   taniydi, `tool_hint` Go'ni qanday o'rnatishni tushuntiradi, `locate_binary`
   esa `$HOME/go/bin` papkasini ham qidiradi (u ko'pincha PATH'da bo'lmaydi).

@@ -4,7 +4,7 @@
 
 # ✦ Aidevix CLI
 
-### *One command. 45 top AI CLIs. Endless possibilities.*
+### *One command. 47 top AI CLIs. Endless possibilities.*
 
 Type `aidevix` → pick from the list → the CLI launches automatically.
 Not installed yet? It installs itself. 🪄
@@ -42,7 +42,7 @@ Not installed yet? It installs itself. 🪄
 
 ## 📖 About
 
-**Aidevix CLI** is a single-command launcher for 45 top terminal AI CLI agents
+**Aidevix CLI** is a single-command launcher for 47 top terminal AI CLI agents
 (Claude Code, Codex, Gemini, Copilot, Aider, Ollama and more) through one
 interactive menu. Works in `bash`, `zsh`, `cmd` and `PowerShell`.
 
@@ -64,7 +64,7 @@ interactive menu. Works in `bash`, `zsh`, `cmd` and `PowerShell`.
 |---|---|---|
 | 🎨 | **Polished design** | AD logo + gradient banner, live **spinner** animation, colored preview — clean and modern |
 | ⚡ | **One-command install** | `curl ... \| bash` — the rest is automatic |
-| 🎛️ | **A single `aidevix` menu** | 45 top AI CLIs in one interactive list (status + preview) |
+| 🎛️ | **A single `aidevix` menu** | 47 top AI CLIs in one interactive list (status + preview) |
 | 🪄 | **Auto-install** | If the chosen CLI is missing, it asks for permission and installs it |
 | 🔐 | **Login guidance** | Shows which login/API key each agent needs; keys are never stored |
 | 🚀 | **Quick launch** | `aidevix claude` — straight to the agent, no menu |
@@ -134,9 +134,11 @@ interactive menu. Works in `bash`, `zsh`, `cmd` and `PowerShell`.
 | 43 | 🏗️ gpt-engineer | `gpte` | Agent | 🆓 **free** |
 | 44 | 🐰 CodeRabbit | `coderabbit` | Tools | 🆓 **free** |
 | 45 | 📝 aicommits | `aicommits` | Tools | 🔑 |
+| 46 | 🔎 Cody | `cody` | Coding | 🌐 / 🔑 |
+| 47 | 🛠 Gorilla CLI | `gorilla` | Chat | 🆓 **free** |
 
 > **Login icons:** 🔑 API key · 🌐 browser login · 💳 subscription · 🆓 **free** (open source / free tier).
-> 💡 **`aidevix --free`** shows only free agents (21).
+> 💡 **`aidevix --free`** shows only free agents (22).
 > The list lives in `config/agents.conf` — edit/add as you like.
 > ⚠️ Cursor Agent does not work on Windows yet; Antigravity is a manually-downloaded
 > IDE; GitHub CLI on Windows can also be installed via `winget install GitHub.cli`.

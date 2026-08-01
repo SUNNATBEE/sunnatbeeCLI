@@ -8,7 +8,7 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 ## [Nashr qilinmagan]
 
 ### Qo'shildi
-- **🤖 17 yangi AI CLI agenti (jami 28 → 45).** Har biri qo'shishdan oldin
+- **🤖 17 yangi AI CLI agenti (v1.10.0 ustiga; jami 30 → 47).** Har biri qo'shishdan oldin
   paket reyestrida TEKSHIRILDI (npm `bin` maydoni / PyPI / o'rnatuvchi skript),
   ya'ni BINARY nomi ham, o'rnatish buyrug'i ham taxmin emas:
   - **Coding:** Amp (`@sourcegraph/amp`), Droid (Factory AI), Auggie
@@ -21,6 +21,9 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
   - **Chat:** AI Shell (`@builder.io/ai-shell`), Fabric (`go install`).
   - **Agent:** gpt-engineer (pip `gpt-engineer`).
   - **Tools:** CodeRabbit (AI kod-review), aicommits (commit xabarlari).
+  - Amp uchun `@ampcode/cli` ishlatiladi: `@sourcegraph/amp` — o'sha paketga
+    bog'liq yupqa qobiq (ikkalasi bir xil versiyada chiqadi), to'g'ridan-to'g'ri
+    paket bitta bosqichni kamaytiradi.
   - `--top` ro'yxatiga `amp` va `droid` qo'shildi; barcha yangi izoh/auth
     matnlari `lib/i18n/en.sh` ga tarjima qilindi (bepul agentlar: 11 → 21).
 - **`go install` qo'llab-quvvatlanadi** — `detect_install_tool` endi "go"ni
@@ -32,6 +35,36 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
   uchun YAGONA manba; unda YO'Q emoji baytlari qisman mos kelib, satrda "�"
   qoldirardi (🔮 Jules, 🧵 Fabric, ⚒️ Forge). Yetishmayotgan uch belgi
   to'plamga qo'shildi.
+
+## [1.10.0] — 2026-07-31
+
+### Qo'shildi
+- **9 ta yangi AI CLI agenti — jami 28 → 37.**
+
+  | Agent | Buyruq | O'rnatish | Guruh |
+  |-------|--------|-----------|-------|
+  | Amp (Sourcegraph) | `amp` | `@ampcode/cli` | Coding |
+  | Auggie (Augment Code) | `auggie` | `@augmentcode/auggie` | Coding |
+  | Cody (Sourcegraph) | `cody` | `@sourcegraph/cody` | Coding |
+  | Forge | `forge` | `@antinomyhq/forge` | Coding |
+  | iFlow CLI | `iflow` | `@iflow-ai/iflow-cli` | Coding |
+  | Kimi CLI (Moonshot AI) | `kimi` | `pip kimi-cli` | Coding |
+  | Micro Agent (Builder.io) | `micro-agent` | `@builder.io/micro-agent` | Coding |
+  | gpt-engineer | `gpte` | `pip gpt-engineer` | Agent |
+  | Gorilla CLI (UC Berkeley) | `gorilla` | `pip gorilla-cli` | Chat |
+
+  Har bir yozuv **reyestrdan tekshirilgan**: paket mavjudligi, `bin` maydonidan
+  olingan ANIQ buyruq nomi va javob beradigan URL. Xotiradan yozilmagan —
+  noto'g'ri o'rnatish buyrug'i foydalanuvchida shunchaki ishlamaydi.
+  Tekshiruvda ikkita xato aniqlandi va tuzatildi: `@sourcegraph/amp` paketi
+  `@ampcode/cli` ga KO'CHIRILGAN (eskisi bilan yozilsa eskirgan nusxa
+  o'rnatilardi), `gpt-engineer` ning buyrug'i esa `gpt-engineer` emas, `gpte`.
+
+### Tuzatildi
+- **Gorilla CLI izohidagi 🦍 emoji `UI_EMOJI` jadvalida yo'q edi** — emoji
+  tozalash bosqichida u to'liq olib tashlanmay, ro'yxatda buzuq belgi
+  (`�`) qoldirardi. Jadvaldagi belgi bilan almashtirildi. Barcha 37 ta izoh
+  tozalashdan keyin tekshirildi.
 
 ## [1.9.4] — 2026-07-30
 

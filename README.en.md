@@ -4,7 +4,7 @@
 
 # ✦ Aidevix CLI
 
-### *One command. 28 top AI CLIs. Endless possibilities.*
+### *One command. 45 top AI CLIs. Endless possibilities.*
 
 Type `aidevix` → pick from the list → the CLI launches automatically.
 Not installed yet? It installs itself. 🪄
@@ -42,7 +42,7 @@ Not installed yet? It installs itself. 🪄
 
 ## 📖 About
 
-**Aidevix CLI** is a single-command launcher for 28 top terminal AI CLI agents
+**Aidevix CLI** is a single-command launcher for 45 top terminal AI CLI agents
 (Claude Code, Codex, Gemini, Copilot, Aider, Ollama and more) through one
 interactive menu. Works in `bash`, `zsh`, `cmd` and `PowerShell`.
 
@@ -64,7 +64,7 @@ interactive menu. Works in `bash`, `zsh`, `cmd` and `PowerShell`.
 |---|---|---|
 | 🎨 | **Polished design** | AD logo + gradient banner, live **spinner** animation, colored preview — clean and modern |
 | ⚡ | **One-command install** | `curl ... \| bash` — the rest is automatic |
-| 🎛️ | **A single `aidevix` menu** | 28 top AI CLIs in one interactive list (status + preview) |
+| 🎛️ | **A single `aidevix` menu** | 45 top AI CLIs in one interactive list (status + preview) |
 | 🪄 | **Auto-install** | If the chosen CLI is missing, it asks for permission and installs it |
 | 🔐 | **Login guidance** | Shows which login/API key each agent needs; keys are never stored |
 | 🚀 | **Quick launch** | `aidevix claude` — straight to the agent, no menu |
@@ -117,9 +117,26 @@ interactive menu. Works in `bash`, `zsh`, `cmd` and `PowerShell`.
 | 26 | 🧰 gptme | `gptme` | Agent | 🆓 **free** |
 | 27 | 💬 Shell GPT | `sgpt` | Chat | 🔑 |
 | 28 | 🪄 Mods | `mods` | Chat | 🔑 |
+| 29 | 🔺 Amp | `amp` | Coding | 🌐 / 🔑 |
+| 30 | 🏭 Droid | `droid` | Coding | 🌐 |
+| 31 | 🧭 Auggie | `auggie` | Coding | 🌐 / 💳 |
+| 32 | 🔮 Jules | `jules` | Coding | 🆓 **free** |
+| 33 | ⚒️ Forge | `forge` | Coding | 🔑 |
+| 34 | 🌊 iFlow CLI | `iflow` | Coding | 🆓 **free** |
+| 35 | 🧪 Qodo Command | `qodo` | Coding | 🆓 / 🔑 |
+| 36 | 🐧 CodeBuddy | `codebuddy` | Coding | 🌐 / 🔑 |
+| 37 | 🌙 Kimi CLI | `kimi` | Coding | 🔑 / 🌐 |
+| 38 | 🔬 Nanocoder | `nanocoder` | Coding | 🆓 **free** |
+| 39 | 🔧 Micro Agent | `micro-agent` | Coding | 🔑 |
+| 40 | 🟠 Amazon Q | `q` | Coding | 🆓 **free** |
+| 41 | 🐚 AI Shell | `ai-shell` | Chat | 🔑 |
+| 42 | 🧵 Fabric | `fabric` | Chat | 🆓 **free** |
+| 43 | 🏗️ gpt-engineer | `gpte` | Agent | 🆓 **free** |
+| 44 | 🐰 CodeRabbit | `coderabbit` | Tools | 🆓 **free** |
+| 45 | 📝 aicommits | `aicommits` | Tools | 🔑 |
 
 > **Login icons:** 🔑 API key · 🌐 browser login · 💳 subscription · 🆓 **free** (open source / free tier).
-> 💡 **`aidevix --free`** shows only free agents (11+).
+> 💡 **`aidevix --free`** shows only free agents (21).
 > The list lives in `config/agents.conf` — edit/add as you like.
 > ⚠️ Cursor Agent does not work on Windows yet; Antigravity is a manually-downloaded
 > IDE; GitHub CLI on Windows can also be installed via `winget install GitHub.cli`.

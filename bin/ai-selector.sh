@@ -119,7 +119,7 @@ DEFAULT_CATEGORY="AI"
 # Tanlangan (curated) "top/mashhur" agentlar — binary nomi bo'yicha. Bitta haqiqat
 # manbai: `--top` filtri HAM, menyu saralashi/⭐ belgisi HAM shunga tayanadi. Yangi
 # mashhur CLI chiqsa — shu ro'yxatga binary nomini qo'shing (bo'sh joy bilan).
-TOP_AGENTS="claude codex gemini copilot cursor-agent aider opencode qwen codebuff freebuff"
+TOP_AGENTS="claude codex gemini copilot cursor-agent aider opencode qwen codebuff freebuff amp droid"
 
 # --- Umumiy yordamchilarni yuklash ----------------------------------------
 # ui.sh (common.sh ichidan yuklanadi) ikonka pog'onasi keshini shu papkada
@@ -540,6 +540,7 @@ detect_install_tool() {
   elif [[ "$install" == *"python "* ]];  then echo "python"
   elif [[ "$install" == *"pip"* ]];      then echo "python3"
   elif [[ "$install" == *"brew "* ]];    then echo "brew"
+  elif [[ "$install" == *"go install"* ]]; then echo "go"
   elif [[ "$install" == *"curl "* ]];    then echo "curl"
   elif [[ "$install" == *"wget "* ]];    then echo "wget"
   else echo ""; fi
@@ -944,7 +945,7 @@ locate_binary() {
   local binary="$1" d cand
   [[ -n "$binary" ]] || return 1
   local -a cands=(
-    "$HOME/.local/bin" "$HOME/bin" "$HOME/.cargo/bin"
+    "$HOME/.local/bin" "$HOME/bin" "$HOME/.cargo/bin" "$HOME/go/bin"
     "$HOME/.$binary/bin" "$HOME/.$binary"
     /usr/local/bin /opt/homebrew/bin
   )

@@ -158,6 +158,8 @@ tool_hint() {
       t "bash kerak. Windows'da Git for Windows o'rnating: https://git-scm.com/download/win" ;;
     brew)
       t "Homebrew kerak. https://brew.sh saytidagi buyruqni terminalga nusxalang." ;;
+    go|golang)
+      t "Go kerak. https://go.dev/dl saytidan yuklab olib o'rnating, so'ng \"\$HOME/go/bin\" papkasini PATH'ga qo'shing." ;;
     *)
       t "'%s' nomli dastur kerak, lekin u topilmadi. Internetdan \"%s install\" deb qidirib o'rnating." "$1" "$1" ;;
   esac

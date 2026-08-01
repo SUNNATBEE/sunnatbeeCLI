@@ -4,7 +4,7 @@
 
 # ✦ Aidevix CLI
 
-### *Bitta buyruq. 28 ta top AI CLI. Cheksiz imkoniyat.*
+### *Bitta buyruq. 45 ta top AI CLI. Cheksiz imkoniyat.*
 
 `aidevix` deb yozing → ro'yxatdan tanlang → CLI avtomatik ishga tushadi.
 O'rnatilmagan bo'lsa — o'zi o'rnatadi. 🪄
@@ -45,7 +45,7 @@ O'rnatilmagan bo'lsa — o'zi o'rnatadi. 🪄
 
 ## 📖 Loyiha haqida
 
-**Aidevix CLI** — terminaldagi 28 ta top AI CLI agentini (Claude Code, Codex,
+**Aidevix CLI** — terminaldagi 45 ta top AI CLI agentini (Claude Code, Codex,
 Gemini, Copilot, Aider, Ollama va h.k.) yagona interaktiv menyu orqali bitta
 buyruq bilan boshqarish vositasi. `bash`, `zsh`, `cmd` va `PowerShell`'da ishlaydi.
 
@@ -67,7 +67,7 @@ buyruq bilan boshqarish vositasi. `bash`, `zsh`, `cmd` va `PowerShell`'da ishlay
 |---|---|---|
 | 🎨 | **Professional dizayn** | AD logosi + gradientli banner, jonli **spinner** animatsiyasi, rangli preview — toza va zamonaviy |
 | ⚡ | **Bir buyruq bilan o'rnatish** | `curl ... \| bash` — qolgani avtomatik |
-| 🎛️ | **Yagona `aidevix` menyusi** | 28 ta top AI CLI bitta interaktiv ro'yxatda (status + preview) |
+| 🎛️ | **Yagona `aidevix` menyusi** | 45 ta top AI CLI bitta interaktiv ro'yxatda (status + preview) |
 | 🪄 | **Avtomatik o'rnatish** | Tanlangan CLI yo'q bo'lsa — ruxsat so'rab o'zi o'rnatadi |
 | 🔐 | **Login yo'riqnomasi** | Har agent uchun qaysi login/API kalit kerakligi ko'rsatiladi; kalitlar saqlanmaydi |
 | 🚀 | **Tezkor ishga tushirish** | `aidevix claude` — menyusiz, to'g'ridan-to'g'ri |
@@ -120,9 +120,26 @@ buyruq bilan boshqarish vositasi. `bash`, `zsh`, `cmd` va `PowerShell`'da ishlay
 | 26 | 🧰 gptme | `gptme` | Agent | 🆓 **bepul** |
 | 27 | 💬 Shell GPT | `sgpt` | Chat | 🔑 |
 | 28 | 🪄 Mods | `mods` | Chat | 🔑 |
+| 29 | 🔺 Amp | `amp` | Coding | 🌐 / 🔑 |
+| 30 | 🏭 Droid | `droid` | Coding | 🌐 |
+| 31 | 🧭 Auggie | `auggie` | Coding | 🌐 / 💳 |
+| 32 | 🔮 Jules | `jules` | Coding | 🆓 **bepul** |
+| 33 | ⚒️ Forge | `forge` | Coding | 🔑 |
+| 34 | 🌊 iFlow CLI | `iflow` | Coding | 🆓 **bepul** |
+| 35 | 🧪 Qodo Command | `qodo` | Coding | 🆓 / 🔑 |
+| 36 | 🐧 CodeBuddy | `codebuddy` | Coding | 🌐 / 🔑 |
+| 37 | 🌙 Kimi CLI | `kimi` | Coding | 🔑 / 🌐 |
+| 38 | 🔬 Nanocoder | `nanocoder` | Coding | 🆓 **bepul** |
+| 39 | 🔧 Micro Agent | `micro-agent` | Coding | 🔑 |
+| 40 | 🟠 Amazon Q | `q` | Coding | 🆓 **bepul** |
+| 41 | 🐚 AI Shell | `ai-shell` | Chat | 🔑 |
+| 42 | 🧵 Fabric | `fabric` | Chat | 🆓 **bepul** |
+| 43 | 🏗️ gpt-engineer | `gpte` | Agent | 🆓 **bepul** |
+| 44 | 🐰 CodeRabbit | `coderabbit` | Tools | 🆓 **bepul** |
+| 45 | 📝 aicommits | `aicommits` | Tools | 🔑 |
 
 > **Login belgilari:** 🔑 API kalit · 🌐 brauzer orqali login · 💳 obuna · 🆓 **bepul** (ochiq manba / bepul tier).
-> 💡 **`aidevix --free`** — faqat bepul agentlarni ko'rsatadi (11+ ta).
+> 💡 **`aidevix --free`** — faqat bepul agentlarni ko'rsatadi (21 ta).
 > Ro'yxat `config/agents.conf`'da — istalgancha o'zgartirish/qo'shish mumkin.
 > ⚠️ Cursor Agent hozircha Windows'da ishlamaydi; Antigravity — qo'lda yuklab olinadi
 > (IDE); GitHub CLI Windows'da `winget install GitHub.cli` bilan ham o'rnatiladi.
@@ -438,8 +455,9 @@ kalit** talab qiladi. Aidevix buni siz uchun soddalashtiradi:
   kompyuteringizda qoladi.
 
 > 💡 **Bepulini sinab ko'rmoqchimisiz?** `aidevix --free` — faqat bepul agentlarni
-> (Gemini, Qwen, Ollama, Continue, Open Interpreter, OpenHands, SWE-agent, Cline,
-> Kilo, GitHub CLI, Antigravity — 11 ta) ko'rsatadi. `aidevix --top` — eng
+> (Gemini, Qwen, Ollama, Continue, Jules, iFlow, Nanocoder, Fabric, CodeRabbit,
+> Open Interpreter, OpenHands, SWE-agent, gpt-engineer, Cline, Kilo, Amazon Q,
+> GitHub CLI, Antigravity — 21 ta) ko'rsatadi. `aidevix --top` — eng
 > mashhurlarini.
 
 | Belgi | Ma'nosi | Misol |
@@ -667,7 +685,7 @@ aidevix-cli/
 │   ├── _aidevix          # zsh native completion
 │   └── aidevix.fish      # fish completion
 └── config/
-    └── agents.conf       # Agentlar ro'yxati (28 ta top AI CLI)
+    └── agents.conf       # Agentlar ro'yxati (45 ta top AI CLI)
 ```
 
 ---

@@ -7,6 +7,32 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+### Qo'shildi
+- **🤖 17 yangi AI CLI agenti (jami 28 → 45).** Har biri qo'shishdan oldin
+  paket reyestrida TEKSHIRILDI (npm `bin` maydoni / PyPI / o'rnatuvchi skript),
+  ya'ni BINARY nomi ham, o'rnatish buyrug'i ham taxmin emas:
+  - **Coding:** Amp (`@sourcegraph/amp`), Droid (Factory AI), Auggie
+    (`@augmentcode/auggie`), Jules (`@google/jules`), Forge
+    (`@antinomyhq/forge`), iFlow CLI (`@iflow-ai/iflow-cli`), Qodo Command
+    (`@qodo/command`), CodeBuddy (`@tencent-ai/codebuddy-code`), Kimi CLI
+    (pip `kimi-cli`), Nanocoder (`@nanocollective/nanocoder`), Micro Agent
+    (`@builder.io/micro-agent`), Amazon Q (qo'lda o'rnatiladi — Antigravity
+    kabi INSTALL bo'sh).
+  - **Chat:** AI Shell (`@builder.io/ai-shell`), Fabric (`go install`).
+  - **Agent:** gpt-engineer (pip `gpt-engineer`).
+  - **Tools:** CodeRabbit (AI kod-review), aicommits (commit xabarlari).
+  - `--top` ro'yxatiga `amp` va `droid` qo'shildi; barcha yangi izoh/auth
+    matnlari `lib/i18n/en.sh` ga tarjima qilindi (bepul agentlar: 11 → 21).
+- **`go install` qo'llab-quvvatlanadi** — `detect_install_tool` endi "go"ni
+  taniydi, `tool_hint` Go'ni qanday o'rnatishni tushuntiradi, `locate_binary`
+  esa `$HOME/go/bin` papkasini ham qidiradi (u ko'pincha PATH'da bo'lmaydi).
+
+### Tuzatildi
+- **Emoji qoldig'i (mojibake) menyuda.** `UI_EMOJI` to'plami — `ui_deemoji_v`
+  uchun YAGONA manba; unda YO'Q emoji baytlari qisman mos kelib, satrda "�"
+  qoldirardi (🔮 Jules, 🧵 Fabric, ⚒️ Forge). Yetishmayotgan uch belgi
+  to'plamga qo'shildi.
+
 ## [1.9.4] — 2026-07-30
 
 ### Tuzatildi

@@ -250,7 +250,7 @@ ui_strip() {
 # ataylab saqlanadi (foydalanuvchi configlari va tarjimalar bilan moslik
 # uchun), lekin INTERFEYSGA chiqmaydi — chizishdan oldin shu yerda olinadi.
 # Bitta bracket-ifoda = BIR o'tish (48 ta alohida almashtirish o'rniga).
-UI_EMOJI='🆓🔑🌐💳🧠⚡✨🐙⭐🔥🚀💬💡📦📊🔄🔁🔐🔒🚫🛠🛡🤖🤝🎯🐉🐝👉💅💻🕒🗨🗺🙌🦘🦙🦢🧩🧰🪄🟢ℹ↩▶⚠❌❓➕'
+UI_EMOJI='🆓🔑🌐💳🧠⚡✨🐙⭐🔥🚀💬💡📦📊🔄🔁🔐🔒🚫🛠🛡🤖🤝🎯🐉🐝👉💅💻🕒🗨🗺🙌🦘🦙🦢🧩🧰🪄🟢🔮🧵⚒ℹ↩▶⚠❌❓➕'
 
 # NOM ORQALI QAYTARUVCHI FUNKSIYALAR — `__` PREFIKSI QOIDASI
 # ---------------------------------------------------------------------------

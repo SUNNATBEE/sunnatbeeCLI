@@ -123,8 +123,12 @@ _load_selector() {
 @test "holat fayllari atomik yoziladi (truncate+write emas)" {
   # LANG_FILE / GLOBAL_OPTIN_FILE / update stamp — Ctrl+C truncate va write
   # orasiga tushsa fayl BO'SH qolib ketardi.
-  ! grep -qE '>"\$(LANG_FILE|GLOBAL_OPTIN_FILE|stamp)"' "$SELECTOR"
-  grep -qE 'atomic_write "\$LANG_FILE"' "$SELECTOR"
-  grep -qE 'atomic_write "\$GLOBAL_OPTIN_FILE"' "$SELECTOR"
-  grep -qE 'atomic_write "\$stamp"' "$SELECTOR"
+  # ESLATMA: global statistika kodi `lib/stats.sh` ga ko'chirilgan, shuning
+  # uchun tekshiruv IKKALA faylni ham qamraydi (faqat SELECTOR'ni qidirgan
+  # eski variant refaktordan keyin jimgina yiqilib qolgan edi).
+  local sources=("$SELECTOR" "$PROJECT_ROOT/lib/stats.sh")
+  ! grep -qE '>"\$(LANG_FILE|GLOBAL_OPTIN_FILE|stamp)"' "${sources[@]}"
+  grep -qE 'atomic_write "\$LANG_FILE"' "${sources[@]}"
+  grep -qE 'atomic_write "\$GLOBAL_OPTIN_FILE"' "${sources[@]}"
+  grep -qE 'atomic_write "\$stamp"' "${sources[@]}"
 }

@@ -2503,6 +2503,22 @@ doctor() {
     done
   done
 
+  # HOZIR ishlayotgan nusxa PATH'dagi shim orqali TOPILMASLIGI mumkin: repo'dan
+  # to'g'ridan-to'g'ri (`bash bin/ai-selector.sh`) ishga tushirilgan, shim boshqa
+  # nomda, yoki umuman o'rnatilmagan. Uni HAR DOIM sanaymiz — aks holda na
+  # "hozir ishlayotgan" belgisi, na ko'p-o'rnatish ogohlantirishi chiqadi
+  # (ya'ni doctor'ning ASOSIY vazifasi bajarilmay qolardi).
+  local self_seen=0 s2
+  for s2 in ${seen[@]+"${seen[@]}"}; do
+    [[ "$s2" == "$PROJECT_ROOT" ]] && self_seen=1
+  done
+  if (( ! self_seen )); then
+    ver="$(tr -d ' \t\r\n' < "$PROJECT_ROOT/VERSION" 2>/dev/null || true)"
+    [[ -n "$ver" ]] || ver="$(t 'noma'\''lum')"
+    d_row ok "$(t 'nusxa')" "v$ver — $PROJECT_ROOT  ← $(t 'hozir ishlayotgan')"
+    seen+=("$PROJECT_ROOT"); found+=("$PROJECT_ROOT")
+  fi
+
   # ENG MUHIM ogohlantirish: PATH'da BIRINCHI turgan nusxa ishlayotgani EMAS.
   if (( ${#found[@]} > 1 )); then
     d_row warn "$(t 'diqqat')" \

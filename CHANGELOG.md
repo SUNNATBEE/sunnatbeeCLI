@@ -7,6 +7,35 @@ loyiha [Semantik versiyalash](https://semver.org/lang/uz/) (SemVer)ga amal qilad
 
 ## [Nashr qilinmagan]
 
+## [1.11.1] — 2026-08-02
+
+### Tuzatildi
+- **Menyu 47 agentdan faqat 20 tasini ko'rsatardi — qolganiga YETIB
+  BO'LMASDI.** `select_with_arrows` da ro'yxat balandligi qattiq `body=20`
+  bilan cheklangan edi va SKROLL INDIKATORI yo'q edi. Ro'yxat aslida
+  siljiydigan bo'lsa-da, oxirgi ko'ringan agentda TUGAGANdek ko'rinardi —
+  natijada v1.10.0/v1.11.0 da qo'shilgan agentlarning ko'pi (Forge, iFlow CLI,
+  Qodo Command, CodeBuddy, Kimi CLI, Nanocoder, Micro Agent, Cody, AI Shell,
+  Fabric, gpt-engineer, CodeRabbit, aicommits) foydalanuvchiga umuman
+  ko'rinmasdi. Endi:
+  - ro'yxat balandligi TERMINALGA qarab o'sadi (yagona chegaralar — terminal
+    balandligi va agentlarning haqiqiy soni);
+  - ro'yxat oynadan uzun bo'lsa, proporsional polzunokli skroll indikatori
+    chiziladi (ikki ustunli maketda ro'yxatning o'ng chekkasida, tor "stacked"
+    maketda chap chekkada). Qatorlar eni O'ZGARMAYDI — tor terminalda ham
+    qator o'ralib ketmaydi.
+  - Indikator belgilari uch pog'onada ham bor: `┃`/`│` (nerd · unicode),
+    `#`/`:` (ascii).
+- **`_af()` `cur == 0` bo'lganda 1 qaytarardi** (oxirgi `(( cur < 0 )) && ...`
+  sharti YOLG'ON bo'lgani uchun). Interaktiv tarmoqda buni `set +e` yashirardi,
+  lekin `AIDEVIX_UI_DUMP` test seam'i errexit ostida ishlaydi va menyu
+  JIMGINA bo'sh kadr qaytarardi. Endi aniq `return 0`.
+
+### Testlar
+- `tests/ui_layout.bats` ga 4 ta regressiya testi: balandlik terminalga
+  bog'liqligi (qattiq 20 cheklovi yo'qligi), indikatorning paydo bo'lishi,
+  hammasi sig'ganda chizilMASligi va qatorlar terminal enidan oshmasligi.
+
 ## [1.11.0] — 2026-08-01
 
 ### Qo'shildi

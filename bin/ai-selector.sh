@@ -1493,7 +1493,7 @@ select_with_arrows() {
     lw=$(( tw * 42 / 100 ))
     (( lw < 34 )) && lw=34
     (( lw > 54 )) && lw=54
-    rw=$(( tw - lw - 7 ))          # chekkalar + ajratgich + bo'shliqlar
+    rw=$(( tw - lw - 9 ))          # chekkalar + ajratgich + skroll ustuni + bo'shliqlar
   else
     lw=$(( tw - 4 )); rw=$(( tw - 4 ))
   fi
@@ -1502,7 +1502,14 @@ select_with_arrows() {
   # +status(1)+footer(1) = 7 qator zaxira, +2 xavfsizlik.
   local body=$(( th - 9 ))
   (( body < 5 )) && body=5
-  (( body > 20 )) && body=20
+  # Balandlik TERMINALGA qarab o'sadi. Ilgari bu yerda qattiq `body=20` cheklovi
+  # turardi: ro'yxat 28 agentda ham 20 tada kesilardi, 47 agentda esa ro'yxatning
+  # YARMIDAN ko'pi ekrandan tashqarida qolib, foydalanuvchiga ro'yxat shu yerda
+  # TUGAGANdek ko'rinardi (skroll indikatori ham yo'q edi). Endi faqat ikkita
+  # tabiiy chegara bor: terminal balandligi va agentlarning haqiqiy soni.
+  local body_max=$total
+  (( body_max < 14 )) && body_max=14   # o'ng ustundagi tafsilotga ham joy kerak
+  (( body > body_max )) && body=$body_max
   local page=$body
   if (( two_col == 0 )); then
     page=$(( body - 8 )); (( page < 3 )) && page=3   # qolgani tafsilotga
@@ -1608,6 +1615,10 @@ select_with_arrows() {
     done
     (( cur >= ${#vis[@]} )) && cur=$(( ${#vis[@]} - 1 ))
     (( cur < 0 )) && cur=0
+    # Oxirgi `(( ... )) && ...` shart YOLG'ON bo'lsa 1 qaytaradi (cur=0 — ODATIY
+    # hol). Interaktiv tarmoqda buni `set +e` yashiradi, lekin UI_DUMP seam'i
+    # errexit ostida ishlaydi va menyu JIMGINA bo'sh chiqardi. Aniq 0 qaytaramiz.
+    return 0
   }
 
   # _ad <menyu-indeksi> — tanlangan agent tafsilotini DETAIL[] ga yozadi.
@@ -1679,7 +1690,18 @@ select_with_arrows() {
     if (( two_col )); then detail_clip "$body"
     else                   detail_clip $(( body - page - 1 )); fi
 
-    local r vi oi left right lpad
+    # --- Skroll indikatori (ro'yxat oynasidan uzunroq bo'lsa) ---------------
+    # Ro'yxat 47 agentgacha o'sdi, oyna esa terminalga sig'gani qadar. Indikator
+    # BO'LMAGANDA ro'yxat oxirgi ko'ringan agentda tugagandek tuyulardi va pastdagi
+    # agentlarga (Forge, Kimi, Fabric, ...) umuman yetib bo'lmasdi. Sof arifmetika —
+    # klavish tsiklida fork YO'Q.
+    local sb_h=0 sb_o=0
+    if (( nvis > page )); then
+      sb_h=$(( page * page / nvis )); (( sb_h < 1 )) && sb_h=1
+      sb_o=$(( topv * (page - sb_h) / (nvis - page) ))
+    fi
+
+    local r vi oi left right lpad sb
     if (( two_col )); then
       for (( r = 0; r < body; r++ )); do
         left=""
@@ -1691,21 +1713,33 @@ select_with_arrows() {
         elif (( r == 0 && nvis == 0 )); then
           left="  ${S_NOMATCH}"
         fi
+        sb=' '
+        if (( sb_h > 0 && r < page )); then
+          if (( r >= sb_o && r < sb_o + sb_h )); then sb="${UI_BRAND}${ICO[sb_thumb]}${UI_R}"
+          else                                        sb="${UI_FAINT}${ICO[sb_track]}${UI_R}"; fi
+        fi
         ui_pad_v lpad "$left" "$lw"
         right="${DETAIL[r]:-}"
-        out+=("  ${lpad} ${S_SEP} ${right}")
+        out+=("  ${lpad} ${sb} ${S_SEP} ${right}")
       done
     else
       for (( r = 0; r < page; r++ )); do
+        sb=' '
+        if (( sb_h > 0 )); then
+          if (( r >= sb_o && r < sb_o + sb_h )); then sb="${UI_BRAND}${ICO[sb_thumb]}${UI_R}"
+          else                                        sb="${UI_FAINT}${ICO[sb_track]}${UI_R}"; fi
+        fi
         vi=$(( topv + r ))
         if (( vi < nvis )); then
           oi=${vis[vi]}
-          if (( vi == cur )); then out+=("  ${UI_BRAND}${ICO[arrow]}${UI_R} ${displays[oi]}")
-          else                     out+=("    ${displays[oi]}"); fi
+          # Skroll ustuni ENG CHAPDA — qatorlar eni O'ZGARMAYDI (bo'sh joyning
+          # o'rniga chiziladi), ya'ni tor terminalda ham qator o'ralib ketmaydi.
+          if (( vi == cur )); then out+=("${sb} ${UI_BRAND}${ICO[arrow]}${UI_R} ${displays[oi]}")
+          else                     out+=("${sb}   ${displays[oi]}"); fi
         elif (( r == 0 && nvis == 0 )); then
           out+=("  ${S_NOMATCH}")
         else
-          out+=("")
+          out+=("${sb}")
         fi
       done
       out+=("  ${S_RULE}")

@@ -115,6 +115,7 @@ ui_icons_set() {
         [gh]=$''        [google]=$''    [cloud]=$''
         [bullet]='·'          [sep]='│'             [line]='─'
         [updown]='↑↓'
+        [sb_thumb]='┃'        [sb_track]='│'
       )
       ;;
     unicode)
@@ -129,6 +130,7 @@ ui_icons_set() {
         [npm]='▪'  [py]='▪'     [rust]='▪'   [gh]='▪'
         [google]='▪' [cloud]='▪' [bullet]='·'
         [sep]='│'  [line]='─'  [updown]='↑↓'
+        [sb_thumb]='┃' [sb_track]='│'
       )
       ;;
     *)  # ascii — LANG=C, eski konsollar, log fayllar
@@ -143,6 +145,7 @@ ui_icons_set() {
         [npm]='#'  [py]='#'     [rust]='#'   [gh]='#'
         [google]='#' [cloud]='#' [bullet]='-'
         [sep]='|'  [line]='-'  [updown]='^v'
+        [sb_thumb]='#' [sb_track]=':'
       )
       UI_ICON_TIER="ascii"
       ;;

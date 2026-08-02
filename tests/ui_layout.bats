@@ -264,3 +264,70 @@ body_of() { printf '%s\n' "$1" | head -n -3; }
   [[ "$body" == *'select_with_numbers'* ]]
   [[ "$body" == *'select_with_fzf'* ]]
 }
+
+# --- Uzun ro'yxat: skroll (regressiya) ------------------------------------
+#
+# Ro'yxat 47 agentgacha o'sganda menyu ularning atigi 20 tasini ko'rsatardi
+# (qattiq `body=20` cheklovi) va skroll indikatori YO'Q edi. Natijada
+# ro'yxat oxirgi ko'ringan agentda TUGAGANdek tuyulardi — pastdagi agentlarni
+# (Forge, Kimi CLI, Fabric, CodeRabbit, ...) foydalanuvchi topa olmasdi.
+
+# big_frame <ustun> <qator> [nechta-agent] — ko'p agentli konfig bilan kadr.
+big_frame() {
+  local cols="$1" rows="$2" n="${3:-40}" i
+  local cfg="$BATS_TEST_TMPDIR/big.conf"
+  : >"$cfg"
+  for (( i = 1; i <= n; i++ )); do
+    printf 'Agent%02d|nope-%02d|nope-%02d|npm install -g nope|Test agent %02d|Coding|🆓 bepul|\n' \
+      "$i" "$i" "$i" "$i" >>"$cfg"
+  done
+  AI_PULT_CONFIG="$cfg" frame "$cols" "$rows"
+}
+
+@test "skroll: ro'yxat balandligi TERMINALGA qarab o'sadi (qattiq 20 cheklovi yo'q)" {
+  local out n20 n40
+  # 30 qatorli terminal: eski qattiq cheklov 20 ta agentda to'xtatardi.
+  out="$(big_frame 110 34 40)"
+  n34="$(printf '%s\n' "$out" | grep -cE '(^|[^0-9])Agent[0-9]{2}' || true)"
+  [ "$n34" -gt 20 ]
+  # Pastroq terminalda esa KAMROQ ko'rinadi — ya'ni balandlik haqiqatan
+  # terminalga bog'liq (qattiq son emas).
+  out="$(big_frame 110 20 40)"
+  n20="$(printf '%s\n' "$out" | grep -cE '(^|[^0-9])Agent[0-9]{2}' || true)"
+  [ "$n20" -lt "$n34" ]
+}
+
+@test "skroll: oyna ro'yxatdan kalta bo'lsa indikator chiziladi" {
+  local out thumb track
+  out="$(big_frame 110 26 40)"
+  # ascii pog'onasida polzunok '#', yo'lak ':' (ICO jadvalidan olamiz).
+  thumb="$(printf '%s' "${ICO[sb_thumb]}")"
+  track="$(printf '%s' "${ICO[sb_track]}")"
+  [ -n "$thumb" ]
+  [ -n "$track" ]
+  # Ikkalasi ham bo'lishi SHART: polzunok bor, lekin ro'yxatning qolgan
+  # qismini bildiradigan yo'lak ham ko'rinadi.
+  [ "$(body_of "$out" | grep -cF "$thumb" || true)" -ge 1 ]
+  [ "$(body_of "$out" | grep -cF "$track" || true)" -ge 1 ]
+}
+
+@test "skroll: hamma agent sig'sa yo'lak chizilmaydi" {
+  local out track
+  # 6 ta agent, baland terminal — skroll kerak emas.
+  out="$(big_frame 110 30 6)"
+  track="$(printf '%s' "${ICO[sb_track]}")"
+  [ "$(body_of "$out" | grep -cF "$track" || true)" -eq 0 ]
+}
+
+@test "skroll: indikator qatorlarni terminal enidan chiqarib yubormaydi" {
+  local out line
+  out="$(big_frame 110 34 40)"
+  while IFS= read -r line; do
+    [ "${#line}" -le 110 ]
+  done <<<"$out"
+  # Tor (stacked) maketda ham.
+  out="$(big_frame 60 24 40)"
+  while IFS= read -r line; do
+    [ "${#line}" -le 60 ]
+  done <<<"$out"
+}
